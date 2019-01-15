@@ -1,6 +1,6 @@
 # conspiracy
 
-Approaching full automation of app pen tests.
+Approaching fully automated web app pen tests.
 
 Wraps Burp Suite and Chrome to automate web app pen testing.
 
