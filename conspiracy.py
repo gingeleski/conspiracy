@@ -5,6 +5,7 @@ Conspiracy - automated web app hacking
 
 Demo
 python conspiracy.py www.google.com
+python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
 
 """
 
@@ -20,14 +21,16 @@ import argparse
 #import asyncio # we probably need some await's somewhere...
 import os
 
+#######################################################################################################################
+
 BURP_SUITE_PROXY = '127.0.0.1:8080'
 
 inscope_urls = {}    # (sub)domains in scope
 hitlist = []         # optional individual urls to specially hit
-
 requested_items = {} # keeps track of every unique request
+output = ''          # what we print out to the user at the end
 
-output = ''
+#######################################################################################################################
 
 def derive_root_url(text_line):
     return text_line
@@ -35,19 +38,33 @@ def derive_root_url(text_line):
 def add_to_inscope_urls(target):
     inscope_urls[target] = True
 
+def get_validated_hitlist_line(line):
+    # Weed out blank/extra lines
+    if len(line.strip()) == 0:
+        return None
+    # Allow lines prepended with # as comments
+    elif line.startswith('#'):
+        return None
+    validated_line = ''
+    if False == line.startswith('http://') or False == line.startswith('https://'):
+        validated_line += 'http://'
+    validated_line += line
+    return validated_line
+
+#######################################################################################################################
+
 # Instantiate the argument parser
 parser = argparse.ArgumentParser(description='Conspiracy - automated web app hacking')
-
+# Declaring all our acceptable arguments below...
 parser.add_argument('target', type=str, help='Overall target URL')
 parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
+# Then grab them from the command line input
 args = parser.parse_args()
-
-# add the overall target to inscope_urls
+# Add the overall target to in-scope URLs
 add_to_inscope_urls(args.target)
-
-# was hitlist flag specified?
+# Was hitlist flag specified?
 if args.hitlist != None:
-    # is the given path valid for a file?
+    # Is the given path valid for a file?
     hitlist_exists = False
     try:
         hitlist_exists = os.path.isfile(args.hitlist)
@@ -55,42 +72,45 @@ if args.hitlist != None:
         pass
     if hitlist_exists:
         hitlist_lines = []
-        # read it in as a text file
+        # Read it in as a text file
         try:
             f = open(args.hitlist, 'r')
-            # break down by lines
+            # Break down by lines
             hitlist_lines = f.readlines()
             f.close()
         except:
             print('ERROR: something went wrong while opening hitlist file: ' + args.hitlist)
             output += 'ERROR: something went wrong while opening hitlist file: ' + args.hitlist + '\n'
-        # validate then add each item to the hitlist
+        # Validate then add each item to the hitlist
         for line in hitlist_lines:
+            validated_line = get_validated_hitlist_line(line)
+            if validated_line == None:
+                continue
             hitlist.append(line)
-            # also add root url to `inscope_urls` if not already in there
+            # Also add root url to in-scope URLs if not already in there
             this_root_url = derive_root_url(line)
             add_to_inscope_urls(this_root_url)
     else:
         print('ERROR: hitlist path was specified but appears invalid: ' + args.hitlist)
         output += 'ERROR: hitlist path was specified but appears invalid: ' + args.hitlist + '\n'
-
-# for each item in hitlist
+# If we have a hitlist then...
 if len(hitlist) > 0:
-    # we'll request it in headless chrome, proxied through burp suite
+    # We're going to request stuff with headless Chrome, proxied through Burp Suite
     browser = launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
+    # Then for each item (URL) ...
     for item in hitlist:
+        # Request the page
         page = browser.newPage()
-        # get page + wait for it to load
-        page.goto('https://www.google.com')
+        page.goto(item)
+        # Wait for it to load "fully"
         page.waitForSelect('body')
-        # (in the future could add some hooks + handles here for other stuff)
-        # close the tab or whatever
+        # ** Here, in the future, could add some hooks + handles for other functionality **
+        # Close the page now
         page.close()
     browser.close()
-
-# for each item in `inscope_urls`
+# For each of our in-scope URLs ...
 for inscope_url, _ in inscope_urls.items():
-    # Module: sslyze
+    # START MODULE: sslyze
     output += 'START: SSLYZE CERTIFICATE INFORMATION' + '\n'
     try:
         sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
@@ -113,8 +133,9 @@ for inscope_url, _ in inscope_urls.items():
         print(f'ERROR: sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
         output += f'ERROR: sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}' + '\n'
     output += 'END: SSLYZE CERTIFICATE INFORMATION' + '\n'
-    # Module: Burp Suite scan
+    # END MODULE: sslyze
+    # START MODULE: Burp Suite
     # TODO
-
-# print out all findings for user
+    # END MODULE: Burp Suite
+# Print out all findings for user
 print(output)
