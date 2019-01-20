@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 import argparse
 import asyncio
 import logging
+import nmap
 import os
 import socket
 import time
@@ -89,6 +90,9 @@ def get_aliases_native(domain):
         return aliases
     except Exception:
         return None
+
+def nmap_async_callback(host, scan_result):
+    logging.info(scan_result)
 
 async def get_browser():
     return await launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
@@ -201,6 +205,10 @@ for inscope_url, _ in inscope_urls.items():
     logging.info('End module: sslyze certificate information <' + inscope_url + '>')
     # END MODULE: sslyze
     # START MODULE: nmap
-    # TODO
+    nma = nmap.PortScannerAsync()
+    # TODO actually test the below + verify arguments via zenmap run
+    nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
+    while nma.still_scanning():
+        nma.wait(5)
     # END MODULE: nmap
 logging.info('End of execution, shutting down...')
