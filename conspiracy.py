@@ -1,8 +1,6 @@
 """
 conspiracy.py
 
-Conspiracy - automated web app hacking
-
 Demo
 python conspiracy.py www.google.com
 python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
@@ -16,12 +14,17 @@ from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScan
 from sslyze.server_connectivity_tester import ServerConnectivityTester
 from sslyze.server_connectivity_tester import ServerConnectivityError
 from sslyze.synchronous_scanner import SynchronousScanner
+from urllib.parse import urlparse
 
 import argparse
-#import asyncio # we probably need some await's somewhere...
+import asyncio
+import logging
 import os
+import time
 
 #######################################################################################################################
+
+DESCRIPTION_STR = 'Conspiracy v0.1 - Automated web app hacking'
 
 BURP_SUITE_PROXY = '127.0.0.1:8080'
 
@@ -30,10 +33,14 @@ hitlist = []         # optional individual urls to specially hit
 requested_items = {} # keeps track of every unique request
 output = ''          # what we print out to the user at the end
 
+logging.basicConfig(level=logging.INFO, filename='conspiracy_' + str(int(time.time())) + '.log', \
+                    filemode='w', format='%(asctime)s [%(levelname)s] %(message)s')
+
 #######################################################################################################################
 
 def derive_root_url(text_line):
-    return text_line
+    o = urlparse(text_line)
+    return o.netloc
 
 def add_to_inscope_urls(target):
     inscope_urls[target] = True
@@ -48,22 +55,43 @@ def get_validated_hitlist_line(line):
     validated_line = ''
     if False == line.startswith('http://') or False == line.startswith('https://'):
         validated_line += 'http://'
-    validated_line += line
+    validated_line += line.replace('\n','') # Strip any line breaks remaining...
     return validated_line
+
+async def get_browser():
+    return await launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
+
+async def run_processing_on_hitlist():
+    # We're going to request stuff with headless Chrome, proxied through Burp Suite
+    browser = await get_browser()
+    # Then for each item (URL) ...
+    for item in hitlist:
+        logging.info(f'Now requesting {item.strip()}')
+        # Request the page
+        page = await browser.newPage()
+        # TODO somehow record traffic into `requested_items` around here
+        await page.goto(item)
+        # ** Here, in the future, could add some hooks + handles for other functionality **
+        # Close the page now
+        await page.close()
+    await browser.close()
 
 #######################################################################################################################
 
 # Instantiate the argument parser
-parser = argparse.ArgumentParser(description='Conspiracy - automated web app hacking')
+parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
 # Declaring all our acceptable arguments below...
 parser.add_argument('target', type=str, help='Overall target URL')
 parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
 # Then grab them from the command line input
 args = parser.parse_args()
+logging.info(DESCRIPTION_STR)
+logging.info('Starting to parse given targets...')
 # Add the overall target to in-scope URLs
 add_to_inscope_urls(args.target)
 # Was hitlist flag specified?
 if args.hitlist != None:
+    logging.info('Hitlist was specified @ ' + args.hitlist)
     # Is the given path valid for a file?
     hitlist_exists = False
     try:
@@ -71,6 +99,7 @@ if args.hitlist != None:
     except:
         pass
     if hitlist_exists:
+        logging.info('Validated hitlist path, now starting to read contents...')
         hitlist_lines = []
         # Read it in as a text file
         try:
@@ -79,8 +108,7 @@ if args.hitlist != None:
             hitlist_lines = f.readlines()
             f.close()
         except:
-            print('ERROR: something went wrong while opening hitlist file: ' + args.hitlist)
-            output += 'ERROR: something went wrong while opening hitlist file: ' + args.hitlist + '\n'
+            logging.error('something went wrong while opening hitlist file: ' + args.hitlist)
         # Validate then add each item to the hitlist
         for line in hitlist_lines:
             validated_line = get_validated_hitlist_line(line)
@@ -91,27 +119,18 @@ if args.hitlist != None:
             this_root_url = derive_root_url(line)
             add_to_inscope_urls(this_root_url)
     else:
-        print('ERROR: hitlist path was specified but appears invalid: ' + args.hitlist)
-        output += 'ERROR: hitlist path was specified but appears invalid: ' + args.hitlist + '\n'
+        logging.error('hitlist path was specified but appears invalid: ' + args.hitlist)
 # If we have a hitlist then...
 if len(hitlist) > 0:
-    # We're going to request stuff with headless Chrome, proxied through Burp Suite
-    browser = launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
-    # Then for each item (URL) ...
-    for item in hitlist:
-        # Request the page
-        page = browser.newPage()
-        page.goto(item)
-        # Wait for it to load "fully"
-        page.waitForSelect('body')
-        # ** Here, in the future, could add some hooks + handles for other functionality **
-        # Close the page now
-        page.close()
-    browser.close()
+    logging.info('Starting asynchronous processing of hitlist now...')
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(run_processing_on_hitlist())
+logging.info('Starting broader processing of in-scope URLs...')
 # For each of our in-scope URLs ...
 for inscope_url, _ in inscope_urls.items():
+    logging.info('Processing <' + inscope_url + '>')
     # START MODULE: sslyze
-    output += 'START: SSLYZE CERTIFICATE INFORMATION' + '\n'
+    logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
     try:
         sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
         sslyze_server_info = sslyze_conn_test.perform()
@@ -119,23 +138,21 @@ for inscope_url, _ in inscope_urls.items():
         sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CertificateInfoScanCommand())
         sslyze_result_lines = sslyze_results.as_text()
         for line in sslyze_result_lines:
-            output += line + '\n'
+            logging.info(line)
         sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
         sslyze_result_lines = sslyze_results.as_text()
         for line in sslyze_result_lines:
-            output += line + '\n'
+            logging.info(line)
         sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
         sslyze_result_lines = sslyze_results.as_text()
         for line in sslyze_result_lines:
-            output += line + '\n'
+            logging.info(line)
     except ServerConnectivityError as e:
         # Could not establish a TLS/SSL connection to the server
-        print(f'ERROR: sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
-        output += f'ERROR: sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}' + '\n'
-    output += 'END: SSLYZE CERTIFICATE INFORMATION' + '\n'
+        logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
+    logging.info('End module: sslyze certificate information <' + inscope_url + '>')
     # END MODULE: sslyze
     # START MODULE: Burp Suite
     # TODO
     # END MODULE: Burp Suite
-# Print out all findings for user
-print(output)
+logging.info('End of execution, shutting down...')
