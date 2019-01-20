@@ -20,6 +20,7 @@ import argparse
 import asyncio
 import logging
 import os
+import socket
 import time
 
 #######################################################################################################################
@@ -57,6 +58,37 @@ def get_validated_hitlist_line(line):
         validated_line += 'http://'
     validated_line += line.replace('\n','') # Strip any line breaks remaining...
     return validated_line
+
+def get_ip_addresses_cmd(domain):
+    # TODO
+    return None
+
+def get_aliases_cmd(domain):
+    # TODO
+    return None
+
+def get_ip_addresses_native(domain):
+    """
+    Returns one or more IP address strings that respond as the provided
+    domain name
+    """
+    try:
+        data = socket.gethostbyname_ex(domain)
+        ip_addresses = repr(data[2])
+        return ip_addresses
+    except Exception:
+        return None
+
+def get_aliases_native(domain):
+    """
+    Returns one or more aliases for the provided domain
+    """
+    try:
+        data = socket.gethostbyname_ex(domain)
+        aliases = repr(data[1])
+        return aliases
+    except Exception:
+        return None
 
 async def get_browser():
     return await launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
@@ -129,6 +161,22 @@ logging.info('Starting broader processing of in-scope URLs...')
 # For each of our in-scope URLs ...
 for inscope_url, _ in inscope_urls.items():
     logging.info('Processing <' + inscope_url + '>')
+    # START MODULE: nslookup
+    logging.info('Begin module: nslookup <' + inscope_url + '>')
+    ip_addresses = get_ip_addresses_cmd(inscope_url)
+    if ip_addresses == None: # Python-native backup
+        ip_addresses = get_ip_addresses_native(inscope_url)
+    if len(ip_addresses) > 0:
+        logging.info('\t' + 'IP addresses:')
+        logging.info('\t\t' + str(ip_addresses))
+    aliases = get_aliases_cmd(inscope_url)
+    if aliases == None: # Python-native backup
+        aliases = get_aliases_native(inscope_url)
+    if len(aliases) > 0:
+        logging.info('\t' + 'Aliases:')
+        logging.info('\t\t' + str(aliases))
+    logging.info('End module: nslookup <' + inscope_url + '>')
+    # END MODULE: nslookup
     # START MODULE: sslyze
     logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
     try:
@@ -152,7 +200,7 @@ for inscope_url, _ in inscope_urls.items():
         logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
     logging.info('End module: sslyze certificate information <' + inscope_url + '>')
     # END MODULE: sslyze
-    # START MODULE: Burp Suite
+    # START MODULE: nmap
     # TODO
-    # END MODULE: Burp Suite
+    # END MODULE: nmap
 logging.info('End of execution, shutting down...')
