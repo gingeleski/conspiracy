@@ -205,10 +205,17 @@ for inscope_url, _ in inscope_urls.items():
     logging.info('End module: sslyze certificate information <' + inscope_url + '>')
     # END MODULE: sslyze
     # START MODULE: nmap
-    nma = nmap.PortScannerAsync()
-    # TODO actually test the below + verify arguments via zenmap run
-    nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
-    while nma.still_scanning():
-        nma.wait(5)
+    skip_nmap = False
+    try:
+        nma = nmap.PortScannerAsync()
+    except nmap.nmap.PortScannerError as e:
+        # Most likely, nmap is not on the path
+        logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
+        skip_nmap = True
+    if False == skip_nmap:
+        # TODO actually test the below + verify arguments via zenmap run
+        nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
+        while nma.still_scanning():
+            nma.wait(5)
     # END MODULE: nmap
 logging.info('End of execution, shutting down...')
