@@ -102,9 +102,14 @@ def check_if_proxy_up(proxy_addr):
         opener = urllib.request.build_opener(proxy_handler)
         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
         urllib.request.install_opener(opener)
-        req = urllib.request.Request('https://github.com/gingeleski/conspiracy')
+        req = urllib.request.Request('https://github.com')
         sock = urllib.request.urlopen(req)
-    except:
+    except urllib.error.HTTPError as e:
+        if e.getcode() >= 400 and e.getcode() <= 500:
+            return True
+        return False
+    except Exception as e:
+        print(str(e))
         return False
     return True
 
@@ -120,7 +125,11 @@ async def run_processing_on_hitlist():
         # Request the page
         page = await browser.newPage()
         # TODO somehow record traffic into `requested_items` around here
-        await page.goto(item)
+        try:
+            await page.goto(item)
+        except pyppeteer.errors.TimeoutError as e:
+            logging.warning('Timed out on request to ' + item)
+            logging.warning('\t' + str(e))
         # ** Here, in the future, could add some hooks + handles for other functionality **
         # Close the page now
         await page.close()
