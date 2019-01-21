@@ -14,7 +14,6 @@ from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScan
 from sslyze.server_connectivity_tester import ServerConnectivityTester
 from sslyze.server_connectivity_tester import ServerConnectivityError
 from sslyze.synchronous_scanner import SynchronousScanner
-from urllib.parse import urlparse
 
 import argparse
 import asyncio
@@ -23,6 +22,9 @@ import nmap
 import os
 import socket
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 #######################################################################################################################
 
@@ -41,7 +43,7 @@ logging.basicConfig(level=logging.INFO, filename='conspiracy_' + str(int(time.ti
 #######################################################################################################################
 
 def derive_root_url(text_line):
-    o = urlparse(text_line)
+    o = urllib.parse.urlparse(text_line)
     return o.netloc
 
 def add_to_inscope_urls(target):
@@ -94,6 +96,18 @@ def get_aliases_native(domain):
 def nmap_async_callback(host, scan_result):
     logging.info(scan_result)
 
+def check_if_proxy_up(proxy_addr):
+    try:
+        proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr })
+        opener = urllib.request.build_opener(proxy_handler)
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        req = urllib.request.Request('https://github.com/gingeleski/conspiracy')
+        sock = urllib.request.urlopen(req)
+    except:
+        return False
+    return True
+
 async def get_browser():
     return await launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
 
@@ -114,108 +128,117 @@ async def run_processing_on_hitlist():
 
 #######################################################################################################################
 
-# Instantiate the argument parser
-parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
-# Declaring all our acceptable arguments below...
-parser.add_argument('target', type=str, help='Overall target URL')
-parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
-# Then grab them from the command line input
-args = parser.parse_args()
-logging.info(DESCRIPTION_STR)
-logging.info('Starting to parse given targets...')
-# Add the overall target to in-scope URLs
-add_to_inscope_urls(args.target)
-# Was hitlist flag specified?
-if args.hitlist != None:
-    logging.info('Hitlist was specified @ ' + args.hitlist)
-    # Is the given path valid for a file?
-    hitlist_exists = False
-    try:
-        hitlist_exists = os.path.isfile(args.hitlist)
-    except:
-        pass
-    if hitlist_exists:
-        logging.info('Validated hitlist path, now starting to read contents...')
-        hitlist_lines = []
-        # Read it in as a text file
+def main():
+    # Instantiate the argument parser
+    parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
+    # Declaring all our acceptable arguments below...
+    parser.add_argument('target', type=str, help='Overall target URL')
+    parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
+    # Then grab them from the command line input
+    args = parser.parse_args()
+    logging.info(DESCRIPTION_STR)
+    logging.info('Starting to parse given targets...')
+    # Add the overall target to in-scope URLs
+    add_to_inscope_urls(args.target)
+    # Was hitlist flag specified?
+    if args.hitlist != None:
+        logging.info('Hitlist was specified @ ' + args.hitlist)
+        # Is the given path valid for a file?
+        hitlist_exists = False
         try:
-            f = open(args.hitlist, 'r')
-            # Break down by lines
-            hitlist_lines = f.readlines()
-            f.close()
+            hitlist_exists = os.path.isfile(args.hitlist)
         except:
-            logging.error('something went wrong while opening hitlist file: ' + args.hitlist)
-        # Validate then add each item to the hitlist
-        for line in hitlist_lines:
-            validated_line = get_validated_hitlist_line(line)
-            if validated_line == None:
-                continue
-            hitlist.append(line)
-            # Also add root url to in-scope URLs if not already in there
-            this_root_url = derive_root_url(line)
-            add_to_inscope_urls(this_root_url)
-    else:
-        logging.error('hitlist path was specified but appears invalid: ' + args.hitlist)
-# If we have a hitlist then...
-if len(hitlist) > 0:
-    logging.info('Starting asynchronous processing of hitlist now...')
-    loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(run_processing_on_hitlist())
-logging.info('Starting broader processing of in-scope URLs...')
-# For each of our in-scope URLs ...
-for inscope_url, _ in inscope_urls.items():
-    logging.info('Processing <' + inscope_url + '>')
-    # START MODULE: nslookup
-    logging.info('Begin module: nslookup <' + inscope_url + '>')
-    ip_addresses = get_ip_addresses_cmd(inscope_url)
-    if ip_addresses == None: # Python-native backup
-        ip_addresses = get_ip_addresses_native(inscope_url)
-    if len(ip_addresses) > 0:
-        logging.info('\t' + 'IP addresses:')
-        logging.info('\t\t' + str(ip_addresses))
-    aliases = get_aliases_cmd(inscope_url)
-    if aliases == None: # Python-native backup
-        aliases = get_aliases_native(inscope_url)
-    if len(aliases) > 0:
-        logging.info('\t' + 'Aliases:')
-        logging.info('\t\t' + str(aliases))
-    logging.info('End module: nslookup <' + inscope_url + '>')
-    # END MODULE: nslookup
-    # START MODULE: sslyze
-    logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
-    try:
-        sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
-        sslyze_server_info = sslyze_conn_test.perform()
-        sslyze_scanner = SynchronousScanner()
-        sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CertificateInfoScanCommand())
-        sslyze_result_lines = sslyze_results.as_text()
-        for line in sslyze_result_lines:
-            logging.info(line)
-        sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
-        sslyze_result_lines = sslyze_results.as_text()
-        for line in sslyze_result_lines:
-            logging.info(line)
-        sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
-        sslyze_result_lines = sslyze_results.as_text()
-        for line in sslyze_result_lines:
-            logging.info(line)
-    except ServerConnectivityError as e:
-        # Could not establish a TLS/SSL connection to the server
-        logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
-    logging.info('End module: sslyze certificate information <' + inscope_url + '>')
-    # END MODULE: sslyze
-    # START MODULE: nmap
-    skip_nmap = False
-    try:
-        nma = nmap.PortScannerAsync()
-    except nmap.nmap.PortScannerError as e:
-        # Most likely, nmap is not on the path
-        logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
-        skip_nmap = True
-    if False == skip_nmap:
-        # TODO actually test the below + verify arguments via zenmap run
-        nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
-        while nma.still_scanning():
-            nma.wait(5)
-    # END MODULE: nmap
-logging.info('End of execution, shutting down...')
+            pass
+        if hitlist_exists:
+            logging.info('Validated hitlist path, now starting to read contents...')
+            hitlist_lines = []
+            # Read it in as a text file
+            try:
+                f = open(args.hitlist, 'r')
+                # Break down by lines
+                hitlist_lines = f.readlines()
+                f.close()
+            except:
+                logging.error('something went wrong while opening hitlist file: ' + args.hitlist)
+            # Validate then add each item to the hitlist
+            for line in hitlist_lines:
+                validated_line = get_validated_hitlist_line(line)
+                if validated_line == None:
+                    continue
+                hitlist.append(line)
+                # Also add root url to in-scope URLs if not already in there
+                this_root_url = derive_root_url(line)
+                add_to_inscope_urls(this_root_url)
+        else:
+            logging.error('hitlist path was specified but appears invalid: ' + args.hitlist)
+    # If we have a hitlist then...
+    if len(hitlist) > 0:
+        if True == check_if_proxy_up(BURP_SUITE_PROXY):
+            logging.info('Starting asynchronous processing of hitlist now...')
+            loop = asyncio.get_event_loop()
+            result = loop.run_until_complete(run_processing_on_hitlist())
+            logging.info('Done processing hitlist')
+        else: # Burp Suite proxy is down
+            logging.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
+            logging.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
+    logging.info('Starting broader processing of in-scope URLs...')
+    # For each of our in-scope URLs ...
+    for inscope_url, _ in inscope_urls.items():
+        logging.info('Processing <' + inscope_url + '>')
+        # START MODULE: nslookup
+        logging.info('Begin module: nslookup <' + inscope_url + '>')
+        ip_addresses = get_ip_addresses_cmd(inscope_url)
+        if ip_addresses == None: # Python-native backup
+            ip_addresses = get_ip_addresses_native(inscope_url)
+        if len(ip_addresses) > 0:
+            logging.info('\t' + 'IP addresses:')
+            logging.info('\t\t' + str(ip_addresses))
+        aliases = get_aliases_cmd(inscope_url)
+        if aliases == None: # Python-native backup
+            aliases = get_aliases_native(inscope_url)
+        if len(aliases) > 0:
+            logging.info('\t' + 'Aliases:')
+            logging.info('\t\t' + str(aliases))
+        logging.info('End module: nslookup <' + inscope_url + '>')
+        # END MODULE: nslookup
+        # START MODULE: sslyze
+        logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
+        try:
+            sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
+            sslyze_server_info = sslyze_conn_test.perform()
+            sslyze_scanner = SynchronousScanner()
+            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CertificateInfoScanCommand())
+            sslyze_result_lines = sslyze_results.as_text()
+            for line in sslyze_result_lines:
+                logging.info(line)
+            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
+            sslyze_result_lines = sslyze_results.as_text()
+            for line in sslyze_result_lines:
+                logging.info(line)
+            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
+            sslyze_result_lines = sslyze_results.as_text()
+            for line in sslyze_result_lines:
+                logging.info(line)
+        except ServerConnectivityError as e:
+            # Could not establish a TLS/SSL connection to the server
+            logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
+        logging.info('End module: sslyze certificate information <' + inscope_url + '>')
+        # END MODULE: sslyze
+        # START MODULE: nmap
+        skip_nmap = False
+        try:
+            nma = nmap.PortScannerAsync()
+        except nmap.nmap.PortScannerError as e:
+            # Most likely, nmap is not on the path
+            logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
+            skip_nmap = True
+        if False == skip_nmap:
+            # TODO actually test the below + verify arguments via zenmap run
+            nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
+            while nma.still_scanning():
+                nma.wait(5)
+        # END MODULE: nmap
+    logging.info('End of execution, shutting down...')
+
+if __name__ == '__main__':
+    main()
