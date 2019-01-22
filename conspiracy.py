@@ -7,7 +7,6 @@ python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
 
 """
 
-from pyppeteer import launch
 from sslyze.plugins.certificate_info_plugin import CertificateInfoScanCommand
 from sslyze.plugins.compression_plugin import CompressionScanCommand
 from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScanCommand
@@ -20,6 +19,7 @@ import asyncio
 import logging
 import nmap
 import os
+import pyppeteer
 import socket
 import time
 import urllib.error
@@ -28,9 +28,10 @@ import urllib.request
 
 #######################################################################################################################
 
-DESCRIPTION_STR = 'Conspiracy v0.1 - Automated web app hacking'
+DESCRIPTION_STR  = 'Conspiracy v0.1 - Automated web app hacking'
 
 BURP_SUITE_PROXY = '127.0.0.1:8080'
+NMAP_SCAN_TYPE   = 'PING'
 
 inscope_urls = {}    # (sub)domains in scope
 hitlist = []         # optional individual urls to specially hit
@@ -93,9 +94,6 @@ def get_aliases_native(domain):
     except Exception:
         return None
 
-def nmap_async_callback(host, scan_result):
-    logging.info(scan_result)
-
 def check_if_proxy_up(proxy_addr):
     try:
         proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr })
@@ -113,8 +111,11 @@ def check_if_proxy_up(proxy_addr):
         return False
     return True
 
+def console_print(message, level='INFO', line_end='\n'):
+    print('[Conspiracy] ' + message, end=line_end)
+
 async def get_browser():
-    return await launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
+    return await pyppeteer.launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
 
 async def run_processing_on_hitlist():
     # We're going to request stuff with headless Chrome, proxied through Burp Suite
@@ -184,9 +185,11 @@ def main():
     if len(hitlist) > 0:
         if True == check_if_proxy_up(BURP_SUITE_PROXY):
             logging.info('Starting asynchronous processing of hitlist now...')
+            console_print('Starting asynchronous processing of hitlist')
             loop = asyncio.get_event_loop()
             result = loop.run_until_complete(run_processing_on_hitlist())
             logging.info('Done processing hitlist')
+            console_print('Done processing hitlist')
         else: # Burp Suite proxy is down
             logging.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
             logging.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
@@ -194,8 +197,10 @@ def main():
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():
         logging.info('Processing <' + inscope_url + '>')
+        console_print('Processing <' + inscope_url + '>')
         # START MODULE: nslookup
         logging.info('Begin module: nslookup <' + inscope_url + '>')
+        console_print('Begin module: nslookup <' + inscope_url + '>')
         ip_addresses = get_ip_addresses_cmd(inscope_url)
         if ip_addresses == None: # Python-native backup
             ip_addresses = get_ip_addresses_native(inscope_url)
@@ -209,9 +214,11 @@ def main():
             logging.info('\t' + 'Aliases:')
             logging.info('\t\t' + str(aliases))
         logging.info('End module: nslookup <' + inscope_url + '>')
+        console_print('End module: nslookup <' + inscope_url + '>')
         # END MODULE: nslookup
         # START MODULE: sslyze
         logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
+        console_print('Begin module: sslyze certificate information <' + inscope_url + '>')
         try:
             sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
             sslyze_server_info = sslyze_conn_test.perform()
@@ -232,22 +239,52 @@ def main():
             # Could not establish a TLS/SSL connection to the server
             logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
         logging.info('End module: sslyze certificate information <' + inscope_url + '>')
+        console_print('End module: sslyze certificate information <' + inscope_url + '>')
         # END MODULE: sslyze
         # START MODULE: nmap
+        logging.info('Start module: nmap port scan <' + inscope_url + '>')
+        console_print('Start module: nmap port scan <' + inscope_url + '>')
         skip_nmap = False
         try:
-            nma = nmap.PortScannerAsync()
+            nm = nmap.PortScanner()
         except nmap.nmap.PortScannerError as e:
             # Most likely, nmap is not on the path
             logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
             skip_nmap = True
         if False == skip_nmap:
-            # TODO actually test the below + verify arguments via zenmap run
-            nma.scan(hosts=inscope_url, arguments='-sP', callback=nmap_async_callback)
-            while nma.still_scanning():
-                nma.wait(5)
+            nmap_args = None
+            # Start nmap scan type logical ladder
+            if NMAP_SCAN_TYPE.upper() == 'INTENSE':
+                nmap_args = '-T4 -A -v'
+            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_PLUS_UDP':
+                nmap_args = '-sS -sU -T4 -A -v'
+            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_ALL_TCP':
+                nmap_args = '-p 1-65535 -T4 -A -v'
+            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_NO_PING':
+                nmap_args = '-T4 -A -v -Pn'
+            elif NMAP_SCAN_TYPE.upper() == 'PING':
+                nmap_args = '-sn'
+            elif NMAP_SCAN_TYPE.upper() == 'QUICK':
+                nmap_args = '-T4 -F'
+            elif NMAP_SCAN_TYPE.upper() == 'QUICK_PLUS':
+                nmap_args = '-sV -T4 -O -F --version-light'
+            elif NMAP_SCAN_TYPE.upper() == 'QUICK_TRACEROUTE':
+                nmap_args = '-sn --traceroute'
+            elif NMAP_SCAN_TYPE.upper() == 'SLOW_COMPREHENSIVE':
+                nmap_args = '-sS -sU -T4 -A -v -PE -PP -PS80,443 -PA3389 -PU40125 -PY -g 53 --script "default or (discovery and safe)"'
+            # End nmap scan type logical ladder
+            if nmap_args != None:
+                nmap_scan_result = nm.scan(hosts=inscope_url, arguments='-sS -sU -T4 -A -v')
+            else:
+                nmap_scan_result = nm.scan(hosts=inscope_url)
+            logging.info(nmap_scan_result)
+        logging.info('End module: nmap port scan <' + inscope_url + '>')
+        console_print('End module: nmap port scan <' + inscope_url + '>')
         # END MODULE: nmap
     logging.info('End of execution, shutting down...')
+    console_print('End of execution, shutting down...')
+
+#######################################################################################################################
 
 if __name__ == '__main__':
     main()
