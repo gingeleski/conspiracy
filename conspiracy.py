@@ -7,31 +7,29 @@ python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
 
 """
 
-from sslyze.plugins.certificate_info_plugin import CertificateInfoScanCommand
-from sslyze.plugins.compression_plugin import CompressionScanCommand
-from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScanCommand
-from sslyze.server_connectivity_tester import ServerConnectivityTester
-from sslyze.server_connectivity_tester import ServerConnectivityError
-from sslyze.synchronous_scanner import SynchronousScanner
-
 import argparse
 import asyncio
 import logging
-import nmap
 import os
 import pyppeteer
 import socket
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'plugins'))
+
+from csp_nmap import NmapPlugin
+from csp_nslookup import NslookupPlugin
+from csp_sslyze import SslyzePlugin
 
 #######################################################################################################################
 
 DESCRIPTION_STR  = 'Conspiracy v0.1 - Automated web app hacking'
 
 BURP_SUITE_PROXY = '127.0.0.1:8080'
-NMAP_SCAN_TYPE   = 'PING'
 
 inscope_urls = {}    # (sub)domains in scope
 hitlist = []         # optional individual urls to specially hit
@@ -62,37 +60,6 @@ def get_validated_hitlist_line(line):
         validated_line += 'http://'
     validated_line += line.replace('\n','') # Strip any line breaks remaining...
     return validated_line
-
-def get_ip_addresses_cmd(domain):
-    # TODO
-    return None
-
-def get_aliases_cmd(domain):
-    # TODO
-    return None
-
-def get_ip_addresses_native(domain):
-    """
-    Returns one or more IP address strings that respond as the provided
-    domain name
-    """
-    try:
-        data = socket.gethostbyname_ex(domain)
-        ip_addresses = repr(data[2])
-        return ip_addresses
-    except Exception:
-        return None
-
-def get_aliases_native(domain):
-    """
-    Returns one or more aliases for the provided domain
-    """
-    try:
-        data = socket.gethostbyname_ex(domain)
-        aliases = repr(data[1])
-        return aliases
-    except Exception:
-        return None
 
 def check_if_proxy_up(proxy_addr):
     try:
@@ -198,89 +165,14 @@ def main():
     for inscope_url, _ in inscope_urls.items():
         logging.info('Processing <' + inscope_url + '>')
         console_print('Processing <' + inscope_url + '>')
-        # START MODULE: nslookup
-        logging.info('Begin module: nslookup <' + inscope_url + '>')
-        console_print('Begin module: nslookup <' + inscope_url + '>')
-        ip_addresses = get_ip_addresses_cmd(inscope_url)
-        if ip_addresses == None: # Python-native backup
-            ip_addresses = get_ip_addresses_native(inscope_url)
-        if len(ip_addresses) > 0:
-            logging.info('\t' + 'IP addresses:')
-            logging.info('\t\t' + str(ip_addresses))
-        aliases = get_aliases_cmd(inscope_url)
-        if aliases == None: # Python-native backup
-            aliases = get_aliases_native(inscope_url)
-        if len(aliases) > 0:
-            logging.info('\t' + 'Aliases:')
-            logging.info('\t\t' + str(aliases))
-        logging.info('End module: nslookup <' + inscope_url + '>')
-        console_print('End module: nslookup <' + inscope_url + '>')
-        # END MODULE: nslookup
-        # START MODULE: sslyze
-        logging.info('Begin module: sslyze certificate information <' + inscope_url + '>')
-        console_print('Begin module: sslyze certificate information <' + inscope_url + '>')
-        try:
-            sslyze_conn_test = ServerConnectivityTester(hostname=inscope_url)
-            sslyze_server_info = sslyze_conn_test.perform()
-            sslyze_scanner = SynchronousScanner()
-            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CertificateInfoScanCommand())
-            sslyze_result_lines = sslyze_results.as_text()
-            for line in sslyze_result_lines:
-                logging.info(line)
-            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
-            sslyze_result_lines = sslyze_results.as_text()
-            for line in sslyze_result_lines:
-                logging.info(line)
-            sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
-            sslyze_result_lines = sslyze_results.as_text()
-            for line in sslyze_result_lines:
-                logging.info(line)
-        except ServerConnectivityError as e:
-            # Could not establish a TLS/SSL connection to the server
-            logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
-        logging.info('End module: sslyze certificate information <' + inscope_url + '>')
-        console_print('End module: sslyze certificate information <' + inscope_url + '>')
-        # END MODULE: sslyze
-        # START MODULE: nmap
-        logging.info('Start module: nmap port scan <' + inscope_url + '>')
-        console_print('Start module: nmap port scan <' + inscope_url + '>')
-        skip_nmap = False
-        try:
-            nm = nmap.PortScanner()
-        except nmap.nmap.PortScannerError as e:
-            # Most likely, nmap is not on the path
-            logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
-            skip_nmap = True
-        if False == skip_nmap:
-            nmap_args = None
-            # Start nmap scan type logical ladder
-            if NMAP_SCAN_TYPE.upper() == 'INTENSE':
-                nmap_args = '-T4 -A -v'
-            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_PLUS_UDP':
-                nmap_args = '-sS -sU -T4 -A -v'
-            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_ALL_TCP':
-                nmap_args = '-p 1-65535 -T4 -A -v'
-            elif NMAP_SCAN_TYPE.upper() == 'INTENSE_NO_PING':
-                nmap_args = '-T4 -A -v -Pn'
-            elif NMAP_SCAN_TYPE.upper() == 'PING':
-                nmap_args = '-sn'
-            elif NMAP_SCAN_TYPE.upper() == 'QUICK':
-                nmap_args = '-T4 -F'
-            elif NMAP_SCAN_TYPE.upper() == 'QUICK_PLUS':
-                nmap_args = '-sV -T4 -O -F --version-light'
-            elif NMAP_SCAN_TYPE.upper() == 'QUICK_TRACEROUTE':
-                nmap_args = '-sn --traceroute'
-            elif NMAP_SCAN_TYPE.upper() == 'SLOW_COMPREHENSIVE':
-                nmap_args = '-sS -sU -T4 -A -v -PE -PP -PS80,443 -PA3389 -PU40125 -PY -g 53 --script "default or (discovery and safe)"'
-            # End nmap scan type logical ladder
-            if nmap_args != None:
-                nmap_scan_result = nm.scan(hosts=inscope_url, arguments='-sS -sU -T4 -A -v')
-            else:
-                nmap_scan_result = nm.scan(hosts=inscope_url)
-            logging.info(nmap_scan_result)
-        logging.info('End module: nmap port scan <' + inscope_url + '>')
-        console_print('End module: nmap port scan <' + inscope_url + '>')
-        # END MODULE: nmap
+        # Looping through plugins of this type
+        plugins = [NslookupPlugin(),SslyzePlugin(),NmapPlugin()]
+        for plugin in plugins:
+            logging.info('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
+            console_print('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
+            plugin.executePerDomainAction(inscope_url)
+            logging.info('End plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
+            console_print('End plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
     logging.info('End of execution, shutting down...')
     console_print('End of execution, shutting down...')
 
