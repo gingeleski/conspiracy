@@ -4,7 +4,7 @@ Web app pen test automation via (headless) Chrome and Burp Suite.
 
 Wraps the two while allowing for plugins at each step of the traffic pipeline.
 
-`TODO add diagram`
+![](/doc/diagrams/overview.png)
 
 You can...
 
