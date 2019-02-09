@@ -1,7 +1,7 @@
 """nmap.py"""
 
 
-from _interfaces import IDomainPlugin
+from ._interfaces import IDomainPlugin
 
 import nmap
 
@@ -64,3 +64,7 @@ class NmapPlugin(IDomainPlugin):
                 nmap_scan_result = nm.scan(hosts=domain)
             #logging.info(nmap_scan_result)
             print(nmap_scan_result)
+
+
+if __name__ == '__main__':
+    exit

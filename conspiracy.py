@@ -9,8 +9,10 @@ python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
 
 import argparse
 import asyncio
+import importlib
 import logging
 import os
+import pkgutil
 import pyppeteer
 import socket
 import sys
@@ -19,11 +21,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'plugins'))
+#######################################################################################################################
 
-from csp_nmap import NmapPlugin
-from csp_nslookup import NslookupPlugin
-from csp_sslyze import SslyzePlugin
+# Dynamically load all Conspiracy plugins
+from Plugins import *
 
 #######################################################################################################################
 

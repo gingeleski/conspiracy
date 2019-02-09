@@ -1,7 +1,7 @@
 """nslookup.py"""
 
 
-from _interfaces import IDomainPlugin
+from ._interfaces import IDomainPlugin
 
 import socket
 
@@ -72,3 +72,7 @@ class NslookupPlugin(IDomainPlugin):
             return aliases
         except Exception:
             return None
+
+
+if __name__ == '__main__':
+    exit

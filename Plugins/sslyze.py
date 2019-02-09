@@ -1,7 +1,7 @@
 """sslyze.py"""
 
 
-from _interfaces import IDomainPlugin
+from ._interfaces import IDomainPlugin
 
 from sslyze.plugins.certificate_info_plugin import CertificateInfoScanCommand
 from sslyze.plugins.compression_plugin import CompressionScanCommand
@@ -53,3 +53,7 @@ class SslyzePlugin(IDomainPlugin):
             # Could not establish a TLS/SSL connection to the server
             #logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
             print(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
+
+
+if __name__ == '__main__':
+    exit
