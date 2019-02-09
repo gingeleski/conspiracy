@@ -1,16 +1,27 @@
 ![](/doc/img/conspiracy-collage.png)
 
-Approaching fully automated web app pen tests.
+Web app pen test automation via (headless) Chrome and Burp Suite.
 
-Wraps Burp Suite and Chrome to automate web app pen testing.
+Wraps the two while allowing for plugins at each step of the traffic pipeline.
 
-Input:
-- Pen test name
-- List of URLs
+`TODO add diagram`
 
-Kickstarts pen test by...
+You can...
 
-- Opens Burp and sets up file for pen test (??)
-- Opens Chrome and has it hooked up to Burp
-- "Smoke tests" by pinging the domains
-- If that's OK, it requests all of the URLs in Chrome which is going through Burp
+- Call other existing tools
+    - i.e. WhatWeb or sslyze
+- Write new pen testing plugins that didn't necessarily make sense for Burp alone
+    - i.e. xssmap
+- Use your imagination. 🌈
+
+## Setup
+
+`TODO`
+
+## Usage
+
+`TODO`
+
+## Contributing
+
+`TODO`
