@@ -1,8 +1,9 @@
 """whatweb.py"""
 
-
-#from ._interfaces import IDomainPlugin
-from _interfaces import IDomainPlugin
+try:
+    from ._interfaces import IDomainPlugin
+except:
+    from _interfaces import IDomainPlugin
 
 import subprocess
 
