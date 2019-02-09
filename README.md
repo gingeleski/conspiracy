@@ -1,4 +1,4 @@
-# conspiracy
+![](/doc/img/conspiracy-collage.png)
 
 Approaching fully automated web app pen tests.
 
