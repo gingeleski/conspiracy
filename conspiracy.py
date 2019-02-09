@@ -25,7 +25,7 @@ import urllib.request
 
 # These snippets of code facilitate dynamic loading of all Conspiracy plugins that are present
 
-from Plugins import *
+from plugins import *
 
 BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
 DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
