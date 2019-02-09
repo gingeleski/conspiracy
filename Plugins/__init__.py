@@ -16,7 +16,7 @@ def _import_all_modules():
     # Dynamically import all the package modules in this directory
     for filename in os.listdir(__name__):
         # Process all Python files in directory that don't start with underscore
-        if filename[0] != '_' and filename.split('.')[-1] in ('py', 'pyw'):
+        if not filename.startswith('__') and filename.split('.')[-1] in ('py', 'pyw'):
             modulename = filename.split('.')[0] # Filename sans extension
             package_module = '.'.join([__name__, modulename])
             try:

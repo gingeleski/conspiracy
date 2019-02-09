@@ -23,14 +23,24 @@ import urllib.request
 
 #######################################################################################################################
 
-# Dynamically load all Conspiracy plugins
+# These snippets of code facilitate dynamic loading of all Conspiracy plugins that are present
+
 from Plugins import *
 
+BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
+DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
+
 #######################################################################################################################
+
+# Global constants
 
 DESCRIPTION_STR  = 'Conspiracy v0.1 - Automated web app hacking'
 
 BURP_SUITE_PROXY = '127.0.0.1:8080'
+
+#######################################################################################################################
+
+# Global variables
 
 inscope_urls = {}    # (sub)domains in scope
 hitlist = []         # optional individual urls to specially hit
@@ -99,7 +109,13 @@ async def run_processing_on_hitlist():
         except pyppeteer.errors.TimeoutError as e:
             logging.warning('Timed out on request to ' + item)
             logging.warning('\t' + str(e))
-        # ** Here, in the future, could add some hooks + handles for other functionality **
+        # Looping through plugins of this type
+        for plugin in BROWSER_PAGE_PLUGINS:
+            logging.info('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
+            console_print('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
+            plugin.executePerDomainAction(inscope_url)
+            logging.info('End plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
+            console_print('End plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
         # Close the page now
         await page.close()
     await browser.close()
@@ -167,8 +183,7 @@ def main():
         logging.info('Processing <' + inscope_url + '>')
         console_print('Processing <' + inscope_url + '>')
         # Looping through plugins of this type
-        plugins = [NslookupPlugin(),SslyzePlugin(),NmapPlugin()]
-        for plugin in plugins:
+        for plugin in DOMAIN_PLUGINS:
             logging.info('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
             console_print('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
             plugin.executePerDomainAction(inscope_url)
