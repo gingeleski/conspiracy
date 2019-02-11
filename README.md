@@ -12,7 +12,7 @@ You can...
     - i.e. WhatWeb or sslyze
 - Write new pen testing plugins that didn't necessarily make sense for Burp alone
     - i.e. xssmap
-- Use your imagination. 🌈
+- Use your imagination 🌈
 
 ## Setup
 
