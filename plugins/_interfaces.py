@@ -12,6 +12,7 @@ class PluginType(Enum):
     """Enum class that defines types of Conspiracy plugins."""
     BROWSER_PAGE = 1
     DOMAIN = 2
+    AUXILIARY = 3
 
 
 class IPlugin(abc.ABC):
@@ -101,3 +102,21 @@ class IDomainPlugin(IPlugin):
             domain (str)
         """
         pass
+
+
+class IAuxiliaryPlugin(IPlugin):
+    """Base class for an 'auxiliary' Conspiracy plugin. Extends .IPlugin class.
+
+    Params:
+        name (str)
+        type (.PluginType)
+    """
+
+    def __init__(self, name):
+        """Constructor, sets plugin name and type.
+
+        Params:
+            name (str)
+        """
+        self.name = name
+        self.type = PluginType.AUXILIARY
