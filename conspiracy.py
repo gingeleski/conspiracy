@@ -38,6 +38,14 @@ DESCRIPTION_STR  = 'Conspiracy v0.1 - Automated web app hacking'
 
 BURP_SUITE_PROXY = '127.0.0.1:8080'
 
+CONSPIRACY_ASCII_ART = ' ######   #######  ##    ##  ######  ########  #### ########     ###     ######  ##    ##\n'+\
+                       '##    ## ##     ## ###   ## ##    ## ##     ##  ##  ##     ##   ## ##   ##    ##  ##  ##\n'+\
+                       '##       ##     ## ####  ## ##       ##     ##  ##  ##     ##  ##   ##  ##         ####\n'+\
+                       '##       ##     ## ## ## ##  ######  ########   ##  ########  ##     ## ##          ##\n'+\
+                       '##       ##     ## ##  ####       ## ##         ##  ##   ##   ######### ##          ##\n'+\
+                       '##    ## ##     ## ##   ### ##    ## ##         ##  ##    ##  ##     ## ##    ##    ##\n'+\
+                       ' ######   #######  ##    ##  ######  ##        #### ##     ## ##     ##  ######     ##'
+
 #######################################################################################################################
 
 # Global variables
@@ -90,7 +98,14 @@ def check_if_proxy_up(proxy_addr):
     return True
 
 def console_print(message, level='INFO', line_end='\n'):
-    print('[Conspiracy] ' + message, end=line_end)
+    split_lines = message.split('\n')
+    for line in split_lines:
+        print('[Conspiracy] ' + line, end=line_end)
+
+def log_info(message):
+    split_lines = message.split('\n')
+    for line in split_lines:
+        logging.info(line)
 
 async def get_browser():
     return await pyppeteer.launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
@@ -100,7 +115,7 @@ async def run_processing_on_hitlist():
     browser = await get_browser()
     # Then for each item (URL) ...
     for item in hitlist:
-        logging.info(f'Now requesting {item.strip()}')
+        log_info(f'Now requesting {item.strip()}')
         # Request the page
         page = await browser.newPage()
         # TODO somehow record traffic into `requested_items` around here
@@ -111,10 +126,10 @@ async def run_processing_on_hitlist():
             logging.warning('\t' + str(e))
         # Looping through plugins of this type
         for plugin in BROWSER_PAGE_PLUGINS:
-            logging.info('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
+            log_info('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
             console_print('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
             plugin.executePerDomainAction(inscope_url)
-            logging.info('End plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
+            log_info('End plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
             console_print('End plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
         # Close the page now
         await page.close()
@@ -130,13 +145,15 @@ def main():
     parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
     # Then grab them from the command line input
     args = parser.parse_args()
-    logging.info(DESCRIPTION_STR)
-    logging.info('Starting to parse given targets...')
+    # Note the extra line breaks in the next two lines of code are for purely visual appearances in the log...
+    log_info(' \n' + CONSPIRACY_ASCII_ART + '\n ')
+    log_info(DESCRIPTION_STR + '\n ')
+    log_info('Starting to parse given targets...')
     # Add the overall target to in-scope URLs
     add_to_inscope_urls(args.target)
     # Was hitlist flag specified?
     if args.hitlist != None:
-        logging.info('Hitlist was specified @ ' + args.hitlist)
+        log_info('Hitlist was specified @ ' + args.hitlist)
         # Is the given path valid for a file?
         hitlist_exists = False
         try:
@@ -144,7 +161,7 @@ def main():
         except:
             pass
         if hitlist_exists:
-            logging.info('Validated hitlist path, now starting to read contents...')
+            log_info('Validated hitlist path, now starting to read contents...')
             hitlist_lines = []
             # Read it in as a text file
             try:
@@ -153,7 +170,7 @@ def main():
                 hitlist_lines = f.readlines()
                 f.close()
             except:
-                logging.error('something went wrong while opening hitlist file: ' + args.hitlist)
+                logging.error('Something went wrong while opening hitlist file: ' + args.hitlist)
             # Validate then add each item to the hitlist
             for line in hitlist_lines:
                 validated_line = get_validated_hitlist_line(line)
@@ -164,32 +181,32 @@ def main():
                 this_root_url = derive_root_url(line)
                 add_to_inscope_urls(this_root_url)
         else:
-            logging.error('hitlist path was specified but appears invalid: ' + args.hitlist)
+            logging.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
     # If we have a hitlist then...
     if len(hitlist) > 0:
         if True == check_if_proxy_up(BURP_SUITE_PROXY):
-            logging.info('Starting asynchronous processing of hitlist now...')
+            log_info('Starting asynchronous processing of hitlist now...')
             console_print('Starting asynchronous processing of hitlist')
             loop = asyncio.get_event_loop()
             result = loop.run_until_complete(run_processing_on_hitlist())
-            logging.info('Done processing hitlist')
+            log_info('Done processing hitlist')
             console_print('Done processing hitlist')
         else: # Burp Suite proxy is down
             logging.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
             logging.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
-    logging.info('Starting broader processing of in-scope URLs...')
+    log_info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():
-        logging.info('Processing <' + inscope_url + '>')
+        log_info('Processing <' + inscope_url + '>')
         console_print('Processing <' + inscope_url + '>')
         # Looping through plugins of this type
         for plugin in DOMAIN_PLUGINS:
-            logging.info('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
+            log_info('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
             console_print('Begin plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
             plugin.executePerDomainAction(inscope_url)
-            logging.info('End plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
+            log_info('End plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
             console_print('End plugin: ' + plugin.get_name() + ' <' + inscope_url + '>')
-    logging.info('End of execution, shutting down...')
+    log_info('End of execution, shutting down...')
     console_print('End of execution, shutting down...')
 
 #######################################################################################################################
