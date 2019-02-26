@@ -21,7 +21,17 @@ class SslyzePlugin(IDomainPlugin):
 
     def __init__(self):
         self.name = 'sslyze certificate information'
-        super(SslyzePlugin, self).__init__(self.name)
+        self.dependencies = [\
+            'asn1crypto==0.24.0',\
+            'cffi==1.12.1',\
+            'cryptography==2.5',\
+            'nassl==2.1.2',\
+            'pycparser==2.19',\
+            'six==1.12.0',\
+            'sslyze==2.0.6',\
+            'tls-parser==1.2.1'\
+        ]
+        super(SslyzePlugin, self).__init__(self.name, self.dependencies)
 
     def executePerDomainAction(self, domain):
         """

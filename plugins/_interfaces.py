@@ -21,14 +21,16 @@ class IPlugin(abc.ABC):
     Params:
         name (str)
         type (PluginType)
+        dependencies (list)
     """
 
     @abc.abstractmethod
-    def __init__(self, name):
+    def __init__(self, name, dependencies):
         """Abstract - constructor, should set plugin name and type.
 
         Params:
             name (str)
+            dependencies (list)
         """
         pass
 
@@ -57,15 +59,16 @@ class IBrowserPagePlugin(IPlugin):
         type (.PluginType)
     """
 
-    def __init__(self, name):
-        """
-        Constructor, sets plugin name and type.
+    def __init__(self, name, dependencies):
+        """Constructor, sets plugin name and type.
 
         Params:
             name (str)
+            dependencies (list)
         """
         self.name = name
         self.type = PluginType.BROWSER_PAGE
+        self.dependencies = dependencies
 
     @abc.abstractmethod
     def executePerPageAction(self, page):
@@ -85,14 +88,16 @@ class IDomainPlugin(IPlugin):
         type (.PluginType)
     """
 
-    def __init__(self, name):
+    def __init__(self, name, dependencies):
         """Constructor, sets plugin name and type.
 
         Params:
             name (str)
+            dependencies (list)
         """
         self.name = name
         self.type = PluginType.DOMAIN
+        self.dependencies = dependencies
 
     @abc.abstractmethod
     def executePerDomainAction(self, domain):
@@ -110,13 +115,16 @@ class IAuxiliaryPlugin(IPlugin):
     Params:
         name (str)
         type (.PluginType)
+        dependencies (list)
     """
 
-    def __init__(self, name):
+    def __init__(self, name, dependencies):
         """Constructor, sets plugin name and type.
 
         Params:
             name (str)
+            dependencies (list)
         """
         self.name = name
         self.type = PluginType.AUXILIARY
+        self.dependencies = dependencies

@@ -16,7 +16,8 @@ class NslookupPlugin(IDomainPlugin):
 
     def __init__(self):
         self.name = 'nslookup'
-        super(NslookupPlugin, self).__init__(self.name)
+        self.dependencies = []
+        super(NslookupPlugin, self).__init__(self.name, self.dependencies)
 
     def executePerDomainAction(self, domain):
         """

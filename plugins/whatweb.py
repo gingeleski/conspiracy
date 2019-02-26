@@ -25,7 +25,8 @@ class WhatWebPlugin(IDomainPlugin):
 
     def __init__(self):
         self.name = 'WhatWeb scanner'
-        super(WhatWebPlugin, self).__init__(self.name)
+        self.dependencies = []
+        super(WhatWebPlugin, self).__init__(self.name, self.dependencies)
 
     def executePerDomainAction(self, domain):
         """

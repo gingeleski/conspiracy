@@ -19,7 +19,8 @@ class NmapPlugin(IDomainPlugin):
 
     def __init__(self):
         self.name = 'nmap port scan'
-        super(NmapPlugin, self).__init__(self.name)
+        self.dependencies = [ 'python-nmap==0.6.1' ]
+        super(NmapPlugin, self).__init__(self.name, self.dependencies)
 
     def executePerDomainAction(self, domain):
         """
