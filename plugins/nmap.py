@@ -1,12 +1,11 @@
 """nmap.py"""
 
-
 from ._interfaces import IDomainPlugin
 
-import nmap
+# Note: more specific imports are in-method
 
 
-NMAP_SCAN_TYPE = 'PING'
+NMAP_SCAN_TYPE = 'QUICK'
 
 
 class NmapPlugin(IDomainPlugin):
@@ -15,11 +14,13 @@ class NmapPlugin(IDomainPlugin):
     Params:
         name (str)
         type (_interfaces.PluginType)
+        requirements (list)
     """
 
     def __init__(self):
         self.name = 'nmap port scan'
-        super(NmapPlugin, self).__init__(self.name)
+        self.requirements = [ 'python-nmap==0.6.1' ]
+        super(NmapPlugin, self).__init__(self.name, self.requirements)
 
     def executePerDomainAction(self, domain):
         """
@@ -28,6 +29,7 @@ class NmapPlugin(IDomainPlugin):
         Params:
             domain (str)
         """
+        import nmap
         skip_nmap = False
         try:
             nm = nmap.PortScanner()

@@ -12,11 +12,13 @@ class NslookupPlugin(IDomainPlugin):
     Params:
         name (str)
         type (_interfaces.PluginType)
+        requirements (list)
     """
 
     def __init__(self):
         self.name = 'nslookup'
-        super(NslookupPlugin, self).__init__(self.name)
+        self.requirements = []
+        super(NslookupPlugin, self).__init__(self.name, self.requirements)
 
     def executePerDomainAction(self, domain):
         """

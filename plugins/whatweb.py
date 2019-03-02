@@ -21,11 +21,13 @@ class WhatWebPlugin(IDomainPlugin):
     Params:
         name (str)
         type (_interfaces.PluginType)
+        requirements (list)
     """
 
     def __init__(self):
         self.name = 'WhatWeb scanner'
-        super(WhatWebPlugin, self).__init__(self.name)
+        self.requirements = []
+        super(WhatWebPlugin, self).__init__(self.name, self.requirements)
 
     def executePerDomainAction(self, domain):
         """

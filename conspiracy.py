@@ -1,9 +1,10 @@
 """
 conspiracy.py
 
-Demo
+Automated web app hacking
+
 python conspiracy.py www.google.com
-python conspiracy.py --hitlist ./test/hitlist1.txt play.google.com
+python conspiracy.py --hitlist ./test/assets/hitlist1.txt play.google.com
 
 """
 

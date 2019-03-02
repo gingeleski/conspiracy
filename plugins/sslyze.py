@@ -3,12 +3,8 @@
 
 from ._interfaces import IDomainPlugin
 
-from sslyze.plugins.certificate_info_plugin import CertificateInfoScanCommand
-from sslyze.plugins.compression_plugin import CompressionScanCommand
-from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScanCommand
-from sslyze.server_connectivity_tester import ServerConnectivityTester
-from sslyze.server_connectivity_tester import ServerConnectivityError
-from sslyze.synchronous_scanner import SynchronousScanner
+
+# Note: more specific imports are in-method
 
 
 class SslyzePlugin(IDomainPlugin):
@@ -17,11 +13,22 @@ class SslyzePlugin(IDomainPlugin):
     Params:
         name (str)
         type (_interfaces.PluginType)
+        requirements (list)
     """
 
     def __init__(self):
         self.name = 'sslyze certificate information'
-        super(SslyzePlugin, self).__init__(self.name)
+        self.requirements = [\
+            'asn1crypto==0.24.0',\
+            'cffi==1.12.1',\
+            'cryptography==2.5',\
+            'nassl==2.1.2',\
+            'pycparser==2.19',\
+            'six==1.12.0',\
+            'sslyze==2.0.6',\
+            'tls-parser==1.2.1'\
+        ]
+        super(SslyzePlugin, self).__init__(self.name, self.requirements)
 
     def executePerDomainAction(self, domain):
         """
@@ -30,6 +37,12 @@ class SslyzePlugin(IDomainPlugin):
         Params:
             domain (str)
         """
+        from sslyze.plugins.certificate_info_plugin import CertificateInfoScanCommand
+        from sslyze.plugins.compression_plugin import CompressionScanCommand
+        from sslyze.plugins.session_renegotiation_plugin import SessionRenegotiationScanCommand
+        from sslyze.server_connectivity_tester import ServerConnectivityTester
+        from sslyze.server_connectivity_tester import ServerConnectivityError
+        from sslyze.synchronous_scanner import SynchronousScanner
         try:
             sslyze_conn_test = ServerConnectivityTester(hostname=domain)
             sslyze_server_info = sslyze_conn_test.perform()
