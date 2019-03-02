@@ -6,10 +6,51 @@ Updates the top-level requirements.txt after considering requirements from all p
 
 from plugins import *
 
+import math
 import os
 import re
 
 #######################################################################################################################
+
+class Requirement:
+    """
+    Stores information about a Python package required by subcomponents of Conspiracy,
+    and considers different version requirements when determining which package version
+    to obtain.
+
+    TODO more doc ?
+    """
+
+    def __init__(self, name):
+        """
+        TODO more doc ?
+        """
+        self.name = name
+        self.min_version = '0.0.0'
+        self.max_version = '0.0.0'
+
+    def accommodate_another_version(self, specifier, version):
+        """
+        Accomodates/considers another version of this requirement, updating
+        the min and max version fields accordingly
+
+        Params:
+            specifier (str)
+            version (str)
+        """
+        if specifier == '==' or specifier == '>=' or specifier == '>':
+            # Make this the new minimum if it's greater than existing minimum
+            if compare_software_versions(self.min_version, version) < 0:
+                self.min_version = version
+            # Make this the new maximum if it's greater than existing maximum
+            if compare_software_versions(self.max_version, version) < 0:
+                self.max_version = version
+        elif specifier == '<=' or specifier == '<':
+            # Bring the maximum down to this version if it's greater
+            if compare_software_versions(self.max_version, version) > 0:
+                self.max_version = version
+        else:
+            raise RuntimeError('Something went wrong with specifier "' + specifier + '" or version "' + version + '"')
 
 class RequirementsHolder:
     """
@@ -44,7 +85,22 @@ ALL_PLUGINS = BROWSER_PAGE_PLUGINS + DOMAIN_PLUGINS + AUXILIARY_PLUGINS
 
 #######################################################################################################################
 
-def get_reqs_tuple(req_line):
+def compare_software_versions(version1, version2):
+    """
+    Normalizes then compares two software version strings.
+    
+    Params:
+        version1 (str)
+        version2 (str)
+        
+    Returns:
+        (int)
+    """
+    def normalize(v):
+        return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
+    return cmp(normalize(version1), normalize(version2))
+
+def get_reqs_tuple(dep_line):
     """
     Takes in a dependency line (think requirements.txt) then returns
     a tuple where dependency name is index 0, the version specifier is
