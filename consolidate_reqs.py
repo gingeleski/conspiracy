@@ -1,9 +1,13 @@
-"""consolidate_deps.py
+"""consolidate_reqs.py
+
+Updates the top-level requirements.txt after considering requirements from all plugins
+
 """
 
 from plugins import *
 
 import os
+import re
 
 #######################################################################################################################
 
@@ -40,27 +44,29 @@ ALL_PLUGINS = BROWSER_PAGE_PLUGINS + DOMAIN_PLUGINS + AUXILIARY_PLUGINS
 
 #######################################################################################################################
 
-def get_reqs_tuple(dep_line):
+def get_reqs_tuple(req_line):
     """
     Takes in a dependency line (think requirements.txt) then returns
     a tuple where dependency name is index 0, the version specifier is
     index 1, and the version number is in the final index, 2.
 
     Params:
-        dep_line (str)
+        req_line (str)
 
     Returns:
         (tuple)
     """
-    if '==' in dep_line:
+    if '==' in req_line:
         version_spec = '=='
-    elif '>=' in dep_line:
+    elif '>=' in req_line:
         version_spec = '>='
-    elif '<=' in dep_line:
+    elif '<=' in req_line:
         version_spec = '<='
     else:
-        raise RuntimeError('Unexpected version specifier in dependency string ' + dep)
-    req_tuple = tuple(dep_line.split(version_spec).insert(1, version_spec))
+        raise RuntimeError('Unexpected version specifier in dependency string ' + req_line)
+    split_req_line_for_tuple = req_line.split(version_spec)
+    split_req_line_for_tuple.insert(1, version_spec)
+    req_tuple = tuple(split_req_line_for_tuple)
     return req_tuple
 
 def consolidate_req_from_multiple(req_tuple_list):
@@ -98,6 +104,7 @@ def make_requirementstxt_string(reqs):
             if req[0] != reqs_sorted[i+1][0]:
                 # Just add the package
                 this_req_line = req[0] + req[1] + req[2]
+                print(this_req_line)
                 requirementstxt_lines.append(this_req_line)
             else:
                 # Figure out all the versions of this requirement - may have more than two
@@ -118,12 +125,16 @@ def make_requirementstxt_string(reqs):
 #######################################################################################################################
 
 if __name__ == '__main__':
-    requirements = RequirementsHolder()
+    requirements = []
     reqs_f = open('requirements.txt', 'r')
-    reqs_lines = reqs_f.readlines()
+    req_lines = reqs_f.readlines()
     reqs_f.close()
-    for reqs_line in reqs_lines:
-        req_tuple = get_reqs_tuple(reqs_line)
+    for req_line in req_lines:
+        # requirements.txt tends to come with weird chars + whitespace from utf-16 so clean this
+        clean_req_line = re.sub(r'([^A-Za-z=\d\.])+', '', req_line)
+        if 0 == len(clean_req_line):
+            continue
+        req_tuple = get_reqs_tuple(clean_req_line)
         requirements.append(req_tuple)
     for plugin in ALL_PLUGINS:
         for dep in plugin.requirements:

@@ -21,16 +21,16 @@ class IPlugin(abc.ABC):
     Params:
         name (str)
         type (PluginType)
-        dependencies (list)
+        requirements (list)
     """
 
     @abc.abstractmethod
-    def __init__(self, name, dependencies):
+    def __init__(self, name, requirements):
         """Abstract - constructor, should set plugin name and type.
 
         Params:
             name (str)
-            dependencies (list)
+            requirements (list)
         """
         pass
 
@@ -59,16 +59,16 @@ class IBrowserPagePlugin(IPlugin):
         type (.PluginType)
     """
 
-    def __init__(self, name, dependencies):
+    def __init__(self, name, requirements):
         """Constructor, sets plugin name and type.
 
         Params:
             name (str)
-            dependencies (list)
+            requirements (list)
         """
         self.name = name
         self.type = PluginType.BROWSER_PAGE
-        self.dependencies = dependencies
+        self.requirements = requirements
 
     @abc.abstractmethod
     def executePerPageAction(self, page):
@@ -88,16 +88,16 @@ class IDomainPlugin(IPlugin):
         type (.PluginType)
     """
 
-    def __init__(self, name, dependencies):
+    def __init__(self, name, requirements):
         """Constructor, sets plugin name and type.
 
         Params:
             name (str)
-            dependencies (list)
+            requirements (list)
         """
         self.name = name
         self.type = PluginType.DOMAIN
-        self.dependencies = dependencies
+        self.requirements = requirements
 
     @abc.abstractmethod
     def executePerDomainAction(self, domain):
@@ -115,16 +115,16 @@ class IAuxiliaryPlugin(IPlugin):
     Params:
         name (str)
         type (.PluginType)
-        dependencies (list)
+        requirements (list)
     """
 
-    def __init__(self, name, dependencies):
+    def __init__(self, name, requirements):
         """Constructor, sets plugin name and type.
 
         Params:
             name (str)
-            dependencies (list)
+            requirements (list)
         """
         self.name = name
         self.type = PluginType.AUXILIARY
-        self.dependencies = dependencies
+        self.requirements = requirements
