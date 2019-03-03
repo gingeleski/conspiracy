@@ -104,6 +104,14 @@ def console_print(message, level='INFO', line_end='\n'):
     for line in split_lines:
         print('[Conspiracy] ' + line, end=line_end)
 
+def console_progress_bar(count, total):
+    bar_length = 60
+    filled_length = int(round(bar_len * count / float(total)))
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_length + '-' * (bar_length - filled_length)
+    sys.stdout.write('[%s] %s%s\r' % (bar, percents, '%'))
+    sys.stdout.flush()
+
 def log_info(message):
     split_lines = message.split('\n')
     for line in split_lines:
