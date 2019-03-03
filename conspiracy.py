@@ -84,7 +84,7 @@ def get_validated_hitlist_line(line):
 
 def check_if_proxy_up(proxy_addr):
     try:
-        proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr })
+        proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr, 'https' : proxy_addr })
         opener = urllib.request.build_opener(proxy_handler)
         opener.addheaders = [('User-agent', 'Mozilla/5.0')]
         urllib.request.install_opener(opener)
@@ -95,7 +95,8 @@ def check_if_proxy_up(proxy_addr):
             return True
         return False
     except Exception as e:
-        print(str(e))
+        logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
+        logger.warning('Assuming proxy is *not* available as a result')
         return False
     return True
 
@@ -117,18 +118,32 @@ def log_info(message):
     for line in split_lines:
         logger.info(line)
 
-async def get_browser():
-    return await pyppeteer.launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
+async def get_browser(use_burp_suite_proxy):
+    """
+    Get browser
 
-async def run_processing_on_hitlist():
+    Params:
+        use_burp_suite_proxy (bool)
+    """
+    if use_burp_suite_proxy:
+        return await pyppeteer.launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
+    # else, don't proxy
+    return await pyppeteer.launch(headless=True)
+
+async def run_processing_on_hitlist(use_burp_suite_proxy):
+    """
+    Run processing on hitlist
+
+    Params:
+        use_burp_suite_proxy (bool)
+    """
     # We're going to request stuff with headless Chrome, proxied through Burp Suite
-    browser = await get_browser()
+    browser = await get_browser(use_burp_suite_proxy)
     # Then for each item (URL) ...
     for item in hitlist:
         log_info(f'Now requesting {item.strip()}')
         # Request the page
         page = await browser.newPage()
-        # TODO somehow record traffic into `requested_items` around here
         try:
             await page.goto(item)
         except pyppeteer.errors.TimeoutError as e:
@@ -194,16 +209,21 @@ def main():
             logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
     # If we have a hitlist then...
     if len(hitlist) > 0:
-        if True == check_if_proxy_up(BURP_SUITE_PROXY):
-            log_info('Starting asynchronous processing of hitlist now...')
-            console_print('Starting asynchronous processing of hitlist')
-            loop = asyncio.get_event_loop()
-            result = loop.run_until_complete(run_processing_on_hitlist())
-            log_info('Done processing hitlist')
-            console_print('Done processing hitlist')
+        log_info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
+        console_print('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
+        burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
+        if burp_proxy_is_up:
+            log_info('Burp Suite proxy appears to be running, will use this for headless Chrome')
+            console_print('Burp Suite proxy appears to be running, will use this for headless Chrome')
         else: # Burp Suite proxy is down
             logger.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
-            logger.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
+            logger.warning('Will not use proxy for headless Chrome')
+        log_info('Starting asynchronous processing of hitlist now...')
+        console_print('Starting asynchronous processing of hitlist now...')
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(run_processing_on_hitlist(burp_proxy_is_up))
+        log_info('Done processing hitlist')
+        console_print('Done processing hitlist')
     log_info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():
