@@ -3,9 +3,10 @@
 Interface base classes for writing Conspiracy plugins.
 """
 
+from enum import Enum
 
 import abc
-from enum import Enum
+import logging
 
 
 class PluginType(Enum):
@@ -21,7 +22,6 @@ class IPlugin(abc.ABC):
     Params:
         name (str)
         type (PluginType)
-        requirements (list)
     """
 
     @abc.abstractmethod
@@ -57,6 +57,8 @@ class IBrowserPagePlugin(IPlugin):
     Params:
         name (str)
         type (.PluginType)
+        requirements (list)
+        logger (Logger)
     """
 
     def __init__(self, name, requirements):
@@ -69,6 +71,7 @@ class IBrowserPagePlugin(IPlugin):
         self.name = name
         self.type = PluginType.BROWSER_PAGE
         self.requirements = requirements
+        self.logger = logging.getLogger('conspiracy')
 
     @abc.abstractmethod
     def executePerPageAction(self, page):
@@ -86,6 +89,8 @@ class IDomainPlugin(IPlugin):
     Params:
         name (str)
         type (.PluginType)
+        requirements (list)
+        logger (Logger)
     """
 
     def __init__(self, name, requirements):
@@ -98,6 +103,7 @@ class IDomainPlugin(IPlugin):
         self.name = name
         self.type = PluginType.DOMAIN
         self.requirements = requirements
+        self.logger = logging.getLogger('conspiracy')
 
     @abc.abstractmethod
     def executePerDomainAction(self, domain):
@@ -116,6 +122,7 @@ class IAuxiliaryPlugin(IPlugin):
         name (str)
         type (.PluginType)
         requirements (list)
+        logger (Logger)
     """
 
     def __init__(self, name, requirements):
@@ -128,3 +135,4 @@ class IAuxiliaryPlugin(IPlugin):
         self.name = name
         self.type = PluginType.AUXILIARY
         self.requirements = requirements
+        self.logger = logging.getLogger('conspiracy')

@@ -22,6 +22,7 @@ class WhatWebPlugin(IDomainPlugin):
         name (str)
         type (_interfaces.PluginType)
         requirements (list)
+        logger (Logger)
     """
 
     def __init__(self):

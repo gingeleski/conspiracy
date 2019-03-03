@@ -58,6 +58,7 @@ output = ''          # what we print out to the user at the end
 
 logging.basicConfig(level=logging.INFO, filename='conspiracy_' + str(int(time.time())) + '.log', \
                     filemode='w', format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger('conspiracy')
 
 #######################################################################################################################
 
@@ -106,7 +107,7 @@ def console_print(message, level='INFO', line_end='\n'):
 def log_info(message):
     split_lines = message.split('\n')
     for line in split_lines:
-        logging.info(line)
+        logger.info(line)
 
 async def get_browser():
     return await pyppeteer.launch(headless=True,args=['--proxy-server=' + BURP_SUITE_PROXY])
@@ -123,8 +124,8 @@ async def run_processing_on_hitlist():
         try:
             await page.goto(item)
         except pyppeteer.errors.TimeoutError as e:
-            logging.warning('Timed out on request to ' + item)
-            logging.warning('\t' + str(e))
+            logger.warning('Timed out on request to ' + item)
+            logger.warning('\t' + str(e))
         # Looping through plugins of this type
         for plugin in BROWSER_PAGE_PLUGINS:
             log_info('Begin plugin: ' + plugin.get_name() + ' <' + item.strip() + '>')
@@ -171,7 +172,7 @@ def main():
                 hitlist_lines = f.readlines()
                 f.close()
             except:
-                logging.error('Something went wrong while opening hitlist file: ' + args.hitlist)
+                logger.error('Something went wrong while opening hitlist file: ' + args.hitlist)
             # Validate then add each item to the hitlist
             for line in hitlist_lines:
                 validated_line = get_validated_hitlist_line(line)
@@ -182,7 +183,7 @@ def main():
                 this_root_url = derive_root_url(line)
                 add_to_inscope_urls(this_root_url)
         else:
-            logging.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
+            logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
     # If we have a hitlist then...
     if len(hitlist) > 0:
         if True == check_if_proxy_up(BURP_SUITE_PROXY):
@@ -193,8 +194,8 @@ def main():
             log_info('Done processing hitlist')
             console_print('Done processing hitlist')
         else: # Burp Suite proxy is down
-            logging.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
-            logging.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
+            logger.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
+            logger.warning('Skipping processing of hitlist (requests with headless Chrome via Burp Suite)')
     log_info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():

@@ -15,6 +15,7 @@ class NmapPlugin(IDomainPlugin):
         name (str)
         type (_interfaces.PluginType)
         requirements (list)
+        logger (Logger)
     """
 
     def __init__(self):
@@ -35,7 +36,7 @@ class NmapPlugin(IDomainPlugin):
             nm = nmap.PortScanner()
         except nmap.nmap.PortScannerError as e:
             # Most likely, nmap is not on the path
-            #logging.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
+            self.logger.error(f'Error launching nmap module - is it on the path? : {e.error_message}')
             print(f'Error launching nmap module - is it on the path? : {e.error_message}')
             skip_nmap = True
         if False == skip_nmap:
@@ -64,7 +65,7 @@ class NmapPlugin(IDomainPlugin):
                 nmap_scan_result = nm.scan(hosts=domain, arguments=nmap_args)
             else:
                 nmap_scan_result = nm.scan(hosts=domain)
-            #logging.info(nmap_scan_result)
+            self.logger.info(nmap_scan_result)
             print(nmap_scan_result)
 
 

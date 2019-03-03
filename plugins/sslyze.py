@@ -14,6 +14,7 @@ class SslyzePlugin(IDomainPlugin):
         name (str)
         type (_interfaces.PluginType)
         requirements (list)
+        logger (Logger)
     """
 
     def __init__(self):
@@ -32,7 +33,7 @@ class SslyzePlugin(IDomainPlugin):
 
     def executePerDomainAction(self, domain):
         """
-        TODO fill this in better
+        This plugin's per-domain action is to run a barrage of sslyze certificate tests
 
         Params:
             domain (str)
@@ -50,21 +51,21 @@ class SslyzePlugin(IDomainPlugin):
             sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CertificateInfoScanCommand())
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
-                #logging.info(line)
+                self.logger.info(line)
                 print(line)
             sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
-                #logging.info(line)
+                self.logger.info(line)
                 print(line)
             sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
-                #logging.info(line)
+                self.logger.info(line)
                 print(line)
         except ServerConnectivityError as e:
             # Could not establish a TLS/SSL connection to the server
-            #logging.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
+            self.logger.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
             print(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')
 
 

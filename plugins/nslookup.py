@@ -13,6 +13,7 @@ class NslookupPlugin(IDomainPlugin):
         name (str)
         type (_interfaces.PluginType)
         requirements (list)
+        logger (Logger)
     """
 
     def __init__(self):
@@ -22,7 +23,7 @@ class NslookupPlugin(IDomainPlugin):
 
     def executePerDomainAction(self, domain):
         """
-        TODO fill this in better
+        This plugin's per-domain action is to get relevant nslookup info
 
         Params:
             domain (str)
@@ -31,17 +32,17 @@ class NslookupPlugin(IDomainPlugin):
         if ip_addresses == None: # Python-native backup
             ip_addresses = self.get_ip_addresses_native(domain)
         if len(ip_addresses) > 0:
-            #logging.info('\t' + 'IP addresses:')
+            self.logger.info('\t' + 'IP addresses:')
             print('\t' + 'IP addresses:')
-            #logging.info('\t\t' + str(ip_addresses))
+            self.logger.info('\t\t' + str(ip_addresses))
             print('\t\t' + str(ip_addresses))
         aliases = self.get_aliases_cmd(domain)
         if aliases == None: # Python-native backup
             aliases = self.get_aliases_native(domain)
         if len(aliases) > 0:
-            #logging.info('\t' + 'Aliases:')
+            self.logger.info('\t' + 'Aliases:')
             print('\t' + 'Aliases:')
-            #logging.info('\t\t' + str(aliases))
+            self.logger.info('\t\t' + str(aliases))
             print('\t\t' + str(aliases))
 
     def get_ip_addresses_cmd(self, domain):
