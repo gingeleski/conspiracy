@@ -52,17 +52,14 @@ class SslyzePlugin(IDomainPlugin):
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
                 self.logger.info(line)
-                print(line)
             sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, SessionRenegotiationScanCommand())
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
                 self.logger.info(line)
-                print(line)
             sslyze_results = sslyze_scanner.run_scan_command(sslyze_server_info, CompressionScanCommand())
             sslyze_result_lines = sslyze_results.as_text()
             for line in sslyze_result_lines:
                 self.logger.info(line)
-                print(line)
         except ServerConnectivityError as e:
             # Could not establish a TLS/SSL connection to the server
             self.logger.error(f'sslyze ended early, could not connect to {e.server_info.hostname}: {e.error_message}')

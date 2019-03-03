@@ -40,7 +40,7 @@ class WhatWebPlugin(IDomainPlugin):
         whatweb_run = subprocess.run(['ruby', WHATWEB_PATH,\
                     '-a', WHATWEB_AGGRESSION, '-U', WHATWEB_USER_AGENT, domain], stdout=subprocess.PIPE)
         whatweb_output = whatweb_run.stdout.decode('utf-8')
-        print(whatweb_output)
+        self.logger.info(whatweb_output)
 
 
 if __name__ == '__main__':

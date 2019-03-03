@@ -33,17 +33,13 @@ class NslookupPlugin(IDomainPlugin):
             ip_addresses = self.get_ip_addresses_native(domain)
         if len(ip_addresses) > 0:
             self.logger.info('\t' + 'IP addresses:')
-            print('\t' + 'IP addresses:')
             self.logger.info('\t\t' + str(ip_addresses))
-            print('\t\t' + str(ip_addresses))
         aliases = self.get_aliases_cmd(domain)
         if aliases == None: # Python-native backup
             aliases = self.get_aliases_native(domain)
         if len(aliases) > 0:
             self.logger.info('\t' + 'Aliases:')
-            print('\t' + 'Aliases:')
             self.logger.info('\t\t' + str(aliases))
-            print('\t\t' + str(aliases))
 
     def get_ip_addresses_cmd(self, domain):
         # TODO
