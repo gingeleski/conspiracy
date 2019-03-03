@@ -24,7 +24,7 @@ class NmapPlugin(IDomainPlugin):
 
     def executePerDomainAction(self, domain):
         """
-        TODO fill this in better
+        This plugin's per-domain action is to execute an nmap scan of configurable intensity
 
         Params:
             domain (str)
@@ -61,7 +61,7 @@ class NmapPlugin(IDomainPlugin):
                 nmap_args = '-sS -sU -T4 -A -v -PE -PP -PS80,443 -PA3389 -PU40125 -PY -g 53 --script "default or (discovery and safe)"'
             # End nmap scan type logical ladder
             if nmap_args != None:
-                nmap_scan_result = nm.scan(hosts=domain, arguments='-sS -sU -T4 -A -v')
+                nmap_scan_result = nm.scan(hosts=domain, arguments=nmap_args)
             else:
                 nmap_scan_result = nm.scan(hosts=domain)
             #logging.info(nmap_scan_result)
