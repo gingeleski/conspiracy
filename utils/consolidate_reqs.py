@@ -4,10 +4,14 @@ Updates the top-level requirements.txt after considering requirements from all p
 
 """
 
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + os.sep + '..')
+
 from plugins import *
 
 import math
-import os
 import re
 
 #######################################################################################################################
