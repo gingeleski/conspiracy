@@ -56,7 +56,6 @@ CONSPIRACY_ASCII_ART = ['',
 inscope_urls = {}    # (sub)domains in scope
 hitlist = []         # optional individual urls to specially hit
 requested_items = {} # keeps track of every unique request
-output = ''          # what we print out to the user at the end
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', \
                     handlers=[ logging.FileHandler('conspiracy_' + str(int(time.time())) + '.log'),\
@@ -70,6 +69,7 @@ def derive_root_url(text_line):
     return o.netloc
 
 def add_to_inscope_urls(target):
+    global inscope_urls
     inscope_urls[target] = True
 
 def get_validated_hitlist_line(line):
@@ -86,6 +86,7 @@ def get_validated_hitlist_line(line):
     return validated_line
 
 def check_if_proxy_up(proxy_addr):
+    global logger
     try:
         proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr, 'https' : proxy_addr })
         opener = urllib.request.build_opener(proxy_handler)
@@ -112,6 +113,7 @@ def console_progress_bar(count, total):
     sys.stdout.flush()
 
 def multi_line_info_log(message):
+    global logger
     split_lines = message.split('\n')
     for line in split_lines:
         logger.info(line)
@@ -135,6 +137,7 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
     Params:
         use_burp_suite_proxy (bool)
     """
+    global hitlist, logger
     # We're going to request stuff with headless Chrome, proxied through Burp Suite
     browser = await get_browser(use_burp_suite_proxy)
     # Then for each item (URL) ...
@@ -159,6 +162,7 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
 #######################################################################################################################
 
 def main():
+    global hitlist, inscope_urls, logger, requested_items
     # Instantiate the argument parser
     parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
     # Declaring all our acceptable arguments below...
@@ -205,6 +209,9 @@ def main():
                 add_to_inscope_urls(this_root_url)
         else:
             logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
+    # DEBUG OVERRIDE START
+    hitlist = ['https://play.google.com/store', 'https://play.google.com/store/movies/details/Once_Upon_a_Deadpool?id=jvPJNemagGg', 'https://play.google.com/store/apps/developer?id=Google+LLC']
+    # DEBUG OVERRIDE END
     # If we have a hitlist then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
