@@ -98,9 +98,13 @@ def check_if_proxy_up(proxy_addr):
         if e.getcode() >= 400 and e.getcode() <= 500:
             return True
         return False
+    except ConnectionRefusedError as e:
+        return False
     except Exception as e:
-        logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
-        logger.warning('Assuming proxy is *not* available as a result')
+        # If whatever this exception is does not stem from connection, call it "unknown"
+        if 'No connection could be made' not in str(e):
+            logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
+            logger.warning('Assuming proxy is *not* available as a result')
         return False
     return True
 
