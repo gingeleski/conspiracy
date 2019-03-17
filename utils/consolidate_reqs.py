@@ -126,6 +126,9 @@ def get_reqs_tuple(dep_line):
         raise RuntimeError('Unexpected version specifier in dependency string ' + req_line)
     split_req_line_for_tuple = req_line.split(version_spec)
     split_req_line_for_tuple.insert(1, version_spec)
+    # Unwanted newlines fix
+    if '\n' in split_req_line_for_tuple[2]:
+        split_req_line_for_tuple[2] = split_req_line_for_tuple[2][:-1]
     req_tuple = tuple(split_req_line_for_tuple)
     return req_tuple
 
@@ -200,6 +203,10 @@ if __name__ == '__main__':
         for dep in plugin.requirements:
             req_tuple = get_reqs_tuple(dep)
             requirements.append(req_tuple)
+    print('DEBUG START')
+    for entry in requirements:
+        print(entry)
+    print('DEBUG END')
     requirementstxt_str = make_requirementstxt_string(requirements)
     # Write new requirements.txt out as requirements.txt.new before swapping with original
     reqs_new_f = open('requirements.txt.new', 'w')
