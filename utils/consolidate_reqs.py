@@ -160,15 +160,19 @@ def make_requirementstxt_string(reqs):
     requirementstxt_lines = []
     # Take the requirements list and sort it by first element (package name)
     reqs_sorted = sorted(reqs, key=lambda x : x[0])
-    for i, req in enumerate(reqs_sorted):
+    # Next couple lines are baby's first for-loop in Python ;)
+    max_i = len(reqs_sorted)
+    i = 0
+    while i < max_i:
+        req = reqs_sorted[i]
         # If there's at least one more element
         if len(reqs_sorted) > i + 1:
             # And the name is different than this one
             if req[0] != reqs_sorted[i+1][0]:
                 # Just add the package
                 this_req_line = req[0] + req[1] + req[2]
-                print(this_req_line)
                 requirementstxt_lines.append(this_req_line)
+            # *But* if the name is the same then...
             else:
                 # Figure out all the versions of this requirement - may have more than two
                 this_req_tuples = [req, reqs_sorted[i+1]]
@@ -180,9 +184,12 @@ def make_requirementstxt_string(reqs):
                         break
                     this_req_tuples.append(req_after)
                 this_req = consolidate_req_from_multiple(this_req_tuples)
-                this_req_line = req[0] + req[1] + req[2]
+                this_req_line = this_req[0] + this_req[1] + this_req[2]
                 requirementstxt_lines.append(this_req_line)
+                i += len(this_req_tuples) - 1 # Less 1 so the steadfast increment by 1 below doesn't screw us
+        i += 1
     requirementstxt_str = '\n'.join(requirementstxt_lines)
+    print(requirementstxt_str)
     return requirementstxt_str
 
 #######################################################################################################################
@@ -203,10 +210,6 @@ if __name__ == '__main__':
         for dep in plugin.requirements:
             req_tuple = get_reqs_tuple(dep)
             requirements.append(req_tuple)
-    print('DEBUG START')
-    for entry in requirements:
-        print(entry)
-    print('DEBUG END')
     requirementstxt_str = make_requirementstxt_string(requirements)
     # Write new requirements.txt out as requirements.txt.new before swapping with original
     reqs_new_f = open('requirements.txt.new', 'w')
