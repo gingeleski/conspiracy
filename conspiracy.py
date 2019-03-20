@@ -1,9 +1,59 @@
+"""
+conspiracy.py
+
+Automated web app hacking
+
+python conspiracy.py www.google.com
+python conspiracy.py --hitlist ./test/assets/hitlist1.txt play.google.com
+
+"""
+
 import asyncio
 import pyppeteer
+import time
 
-BROWSER_PAGE_PLUGINS = []
+#######################################################################################################################
 
+# These snippets of code facilitate dynamic loading of all Conspiracy plugins that are present
+
+from plugins import *
+
+BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
+DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
+
+#######################################################################################################################
+
+# Global constants
+
+DESCRIPTION_STR  = 'Conspiracy v0.1 - Automated web app hacking'
+
+BURP_SUITE_PROXY = '127.0.0.1:8080'
+
+CONSPIRACY_ASCII_ART = ['',
+                        ' ######   #######  ##    ##  ######  ########  #### ########     ###     ######  ##    ##',
+                        '##    ## ##     ## ###   ## ##    ## ##     ##  ##  ##     ##   ## ##   ##    ##  ##  ##',
+                        '##       ##     ## ####  ## ##       ##     ##  ##  ##     ##  ##   ##  ##         ####',
+                        '##       ##     ## ## ## ##  ######  ########   ##  ########  ##     ## ##          ##',
+                        '##       ##     ## ##  ####       ## ##         ##  ##   ##   ######### ##          ##',
+                        '##    ## ##     ## ##   ### ##    ## ##         ##  ##    ##  ##     ## ##    ##    ##',
+                        ' ######   #######  ##    ##  ######  ##        #### ##     ## ##     ##  ######     ##',
+                        '']
+
+#######################################################################################################################
+
+# Global variables
+
+inscope_urls = {}    # (sub)domains in scope
+#hitlist = []         # optional individual urls to specially hit
 hitlist = ['http://example.com', 'https://play.google.com/store', 'https://play.google.com/store/apps']
+requested_items = {} # keeps track of every unique request
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', \
+                    handlers=[ logging.FileHandler('conspiracy_' + str(int(time.time())) + '.log'),\
+                               logging.StreamHandler() ])
+logger = logging.getLogger('conspiracy')
+
+#######################################################################################################################
 
 async def get_browser(use_burp_suite_proxy):
     """
@@ -49,9 +99,13 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
         await page.close()
     await browser.close()
 
+#######################################################################################################################
+
 def main():
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(run_processing_on_hitlist(False))
+
+#######################################################################################################################
 
 if __name__ == '__main__':
     main()
