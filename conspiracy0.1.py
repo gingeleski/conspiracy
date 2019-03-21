@@ -213,13 +213,11 @@ def main():
                 add_to_inscope_urls(this_root_url)
         else:
             logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
-    # DEBUG OVERRIDE START
-    hitlist = ['https://play.google.com/store', 'https://play.google.com/store/movies/details/Once_Upon_a_Deadpool?id=jvPJNemagGg', 'https://play.google.com/store/apps/developer?id=Google+LLC']
-    # DEBUG OVERRIDE END
     # If we have a hitlist then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
-        burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
+        #burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
+        burp_proxy_is_up = False
         if burp_proxy_is_up:
             logger.info('Burp Suite proxy appears to be running, will use this for headless Chrome')
         else: # Burp Suite proxy is down

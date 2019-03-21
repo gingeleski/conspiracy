@@ -176,18 +176,18 @@ def main():
     # TODO bunch of code left out here to parse stuff
     # If we have a hitlist then...
     if len(hitlist) > 0:
-        ###logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
+        logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
         ###burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
-        ###if burp_proxy_is_up:
-        ###    logger.info('Burp Suite proxy appears to be running, will use this for headless Chrome')
-        ###else: # Burp Suite proxy is down
-        ###    logger.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
-        ###    logger.warning('Will not use proxy for headless Chrome')
-        ###logger.info('Starting asynchronous processing of hitlist now...')
+        burp_proxy_is_up = False
+        if burp_proxy_is_up:
+            logger.info('Burp Suite proxy appears to be running, will use this for headless Chrome')
+        else: # Burp Suite proxy is down
+            logger.warning('Found Burp Suite proxy @ ' + BURP_SUITE_PROXY + ' to be down')
+            logger.warning('Will not use proxy for headless Chrome')
+        logger.info('Starting asynchronous processing of hitlist now...')
         loop = asyncio.get_event_loop()
-        ###result = loop.run_until_complete(run_processing_on_hitlist(burp_proxy_is_up))
-        result = loop.run_until_complete(run_processing_on_hitlist(False))
-        ###logger.info('Done processing hitlist')
+        result = loop.run_until_complete(run_processing_on_hitlist(burp_proxy_is_up))
+        logger.info('Done processing hitlist')
     logger.info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():
