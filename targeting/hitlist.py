@@ -21,6 +21,10 @@ class HitlistTargeting(ITargetingMode):
         Returns:
             (bool)
         """
+        if targeting_mode.startswith('hitlist@'):
+            self.hitlist_path = targeting_mode.split('@')[1]
+            return True
+        # Default to false
         return False
 
     def acquire_targets(self):

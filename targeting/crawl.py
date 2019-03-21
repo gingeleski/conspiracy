@@ -21,7 +21,9 @@ class CrawlTargeting(ITargetingMode):
         Returns:
             (bool)
         """
-        # TODO implement this here
+        if targeting_mode.lower() == 'crawl':
+            return True
+        # Default to false
         return False
 
     def acquire_targets(self):
