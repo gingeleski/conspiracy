@@ -117,25 +117,8 @@ def check_if_proxy_up(proxy_addr):
         except Exception as e:
             return True
     else:
-        try:
-            proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr, 'https' : proxy_addr })
-            opener = urllib.request.build_opener(proxy_handler)
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            urllib.request.install_opener(opener)
-            req = urllib.request.Request('https://github.com')
-            sock = urllib.request.urlopen(req)
-        except urllib.error.HTTPError as e:
-            if e.getcode() >= 400 and e.getcode() <= 500:
-                return True
-            return False
-        except ConnectionRefusedError as e:
-            return False
-        except Exception as e:
-            # If whatever this exception is does not stem from connection, call it "unknown"
-            if 'No connection could be made' not in str(e):
-                logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
-                logger.warning('Assuming proxy is *not* available as a result')
-            return False
+        # FIXME under Github issue #47
+        return False
     return True
 
 def console_progress_bar(count, total):
@@ -246,8 +229,7 @@ def main():
     # If we have a hitlist then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
-        #burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
-        burp_proxy_is_up = False
+        burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
         if burp_proxy_is_up:
             logger.info('Burp Suite proxy appears to be running, will use this for headless Chrome')
         else: # Burp Suite proxy is down
