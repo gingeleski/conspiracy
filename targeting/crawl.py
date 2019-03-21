@@ -21,8 +21,14 @@ class CrawlTargeting(ITargetingMode):
         Returns:
             (bool)
         """
+        # TODO implement this here
         return False
 
     def acquire_targets(self):
-        """Run execution logic for this targeting mode."""
-        pass
+        """Run execution logic for this targeting mode, returns new targets' URLs
+        
+        Returns:
+            (list)
+        """
+        # TODO implement this here
+        return []

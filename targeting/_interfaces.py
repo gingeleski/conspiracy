@@ -40,5 +40,9 @@ class ITargetingMode(abc.ABC):
 
     @abc.abstractmethod
     def acquire_targets(self):
-        """Run execution logic for this targeting mode."""
+        """Run execution logic for this targeting mode, returns new targets' URLs
+        
+        Returns:
+            (list)
+        """
         pass

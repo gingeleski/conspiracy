@@ -56,6 +56,8 @@ CONSPIRACY_ASCII_ART = ['',
 PROXY_TEST_TIMEOUT = 5 # seconds
 PROXY_TEST_URL = 'https://www.google.com/'
 
+PUT_OVERALL_DOMAIN_TARGETS_IN_HITLIST = False
+
 #######################################################################################################################
 
 # Global variables
@@ -240,46 +242,32 @@ def main():
     logger.info(DESCRIPTION_STR)
     logger.info('')
     logger.info('Starting to parse given targets...')
+    if PUT_OVERALL_DOMAIN_TARGETS_IN_HITLIST:
+        overall_target_as_url = 'https://' + args.target
+        logger.info('Adding overall target <' + overall_target_as_url + '> to hitlist')
+        # Add overall target to hitlist in URL form with a probably-unneeded check for duplicates along the way
+        hitlist = hitlist + (list(set(overall_target_as_url) - set(hitlist)))
     # Add the overall target to in-scope URLs
     add_to_inscope_urls(args.target)
     # Was targeting mode specified?
     if args.targeting_mode != None:
-        print(args.targeting_mode)
-        for mode in TARGETING_MODES:
-            print(mode.get_name())
-    exit()
-    # THIS IS OLD HERE ---- Was hitlist flag specified?
-    if args.hitlist != None:
-        logger.info('Hitlist was specified @ ' + args.hitlist)
-        # Is the given path valid for a file?
-        hitlist_exists = False
-        try:
-            hitlist_exists = os.path.isfile(args.hitlist)
-        except:
-            pass
-        if hitlist_exists:
-            logger.info('Validated hitlist path, now starting to read contents...')
-            hitlist_lines = []
-            # Read it in as a text file
-            try:
-                f = open(args.hitlist, 'r')
-                # Break down by lines
-                hitlist_lines = f.readlines()
-                f.close()
-            except:
-                logger.error('Something went wrong while opening hitlist file: ' + args.hitlist)
-            # Validate then add each item to the hitlist
-            for line in hitlist_lines:
-                validated_line = get_validated_hitlist_line(line)
-                if validated_line == None:
-                    continue
-                hitlist.append(line)
-                # Also add root url to in-scope URLs if not already in there
-                this_root_url = derive_root_url(line)
-                add_to_inscope_urls(this_root_url)
-        else:
-            logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
-    # If we have a hitlist then...
+        logger.info('Looking for match to given targeting mode string "' + args.targeting_mode + '"')
+        has_run_one_targeting_mode = False
+        for targeting_mode in TARGETING_MODES:
+            if True == targeting_mode.check_arg_match(args.targeting_mode):
+                has_run_one_targeting_mode = True
+                logger.info('Matched targeting mode "' + targeting_mode.get_name() + '"')
+                logger.info('Conducting ' + targeting_mode.get_name() + 'now...')
+                # Run whatever the mode's logic is to get target URLs
+                targets_output = targeting_mode.acquire_targets()
+                previous_targets_number = len(hitlist)
+                # Add any new target URLs to the master list - we avoid duplicate entries
+                hitlist = hitlist + list(set(targets_output) - set(hitlist))
+                new_targets_number = len(hitlist) - previous_targets_number
+                logger.info('Added ' + str(new_targets_number) + ' targets after ' + targeting_mode.get_name())
+        if False == has_run_one_targeting_mode:
+            logger.warning('Did not run any targeting modes - none available matched "' + args.targeting_mode + '"')       
+    # If we have any targets then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
         burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
@@ -292,6 +280,8 @@ def main():
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(run_processing_on_hitlist(burp_proxy_is_up))
         logger.info('Done processing hitlist')
+    else:
+        logger.warning('No targets in hitlist, not requesting anything via headless Chrome')
     logger.info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():
