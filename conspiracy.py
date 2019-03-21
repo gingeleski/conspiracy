@@ -266,7 +266,12 @@ def main():
                 new_targets_number = len(hitlist) - previous_targets_number
                 logger.info('Added ' + str(new_targets_number) + ' targets after ' + targeting_mode.get_name())
         if False == has_run_one_targeting_mode:
-            logger.warning('Did not run any targeting modes - none available matched "' + args.targeting_mode + '"')       
+            logger.warning('Did not run any targeting modes - none available matched "' + args.targeting_mode + '"')
+        else:
+            # Let's now make align in-scope URLs with the hitlist... *THIS IS OPINIONATED*
+            for entry in hitlist:
+                this_root_url = derive_root_url(entry)
+                add_to_inscope_urls(this_root_url)
     # If we have any targets then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
