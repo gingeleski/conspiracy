@@ -26,12 +26,14 @@ import urllib.request
 
 #######################################################################################################################
 
-# These snippets of code facilitate dynamic loading of all Conspiracy plugins that are present
+# These snippets of code facilitate dynamic loading of all Conspiracy modes and plugins that are present
 
 from plugins import *
+from targeting import *
 
 BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
 DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
+TARGETING_MODES = [cls() for cls in ITargetingMode.__subclasses__()]
 
 #######################################################################################################################
 
@@ -229,7 +231,7 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
     # Declaring all our acceptable arguments below...
     parser.add_argument('target', type=str, help='Overall target URL')
-    parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
+    parser.add_argument('--targeting-mode', type=str, help='Optional mode for acquiring target surface')
     # Then grab them from the command line input
     args = parser.parse_args()
     # Note the extra line breaks in the next two lines of code are for purely visual appearances in the log...
@@ -240,7 +242,13 @@ def main():
     logger.info('Starting to parse given targets...')
     # Add the overall target to in-scope URLs
     add_to_inscope_urls(args.target)
-    # Was hitlist flag specified?
+    # Was targeting mode specified?
+    if args.targeting_mode != None:
+        print(args.targeting_mode)
+        for mode in TARGETING_MODES:
+            print(mode.get_name())
+    exit()
+    # THIS IS OLD HERE ---- Was hitlist flag specified?
     if args.hitlist != None:
         logger.info('Hitlist was specified @ ' + args.hitlist)
         # Is the given path valid for a file?
