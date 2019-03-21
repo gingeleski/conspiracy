@@ -16,6 +16,7 @@ import os
 import pkgutil
 import pyppeteer
 import re
+import requests
 import socket
 import sys
 import time
@@ -49,6 +50,9 @@ CONSPIRACY_ASCII_ART = ['',
                         '##    ## ##     ## ##   ### ##    ## ##         ##  ##    ##  ##     ## ##    ##    ##',
                         ' ######   #######  ##    ##  ######  ##        #### ##     ## ##     ##  ######     ##',
                         '']
+
+PROXY_TEST_TIMEOUT = 5 # seconds
+PROXY_TEST_URL = 'https://www.google.com/'
 
 #######################################################################################################################
 
@@ -138,8 +142,15 @@ def check_if_proxy_up(proxy_addr):
         except Exception as e:
             return True
     else:
-        # FIXME under Github issue #47
-        return False
+        try:
+            test_proxies = { 'http' : proxy_addr, 'https' : proxy_addr }
+            r = requests.get(PROXY_TEST_URL, timeout=PROXY_TEST_TIMEOUT, proxies=test_proxies)
+            if r.status_code == requests.codes.ok:
+                return True
+            else:
+                return False
+        except Exception as e:
+            return False
     return True
 
 def console_progress_bar(count, total):
