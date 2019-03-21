@@ -28,10 +28,8 @@ import urllib.request
 
 from plugins import *
 
-###BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
-BROWSER_PAGE_PLUGINS = []
-###DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
-DOMAIN_PLUGINS = []
+BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
+DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
 
 #######################################################################################################################
 
@@ -56,8 +54,7 @@ CONSPIRACY_ASCII_ART = ['',
 # Global variables
 
 inscope_urls = {}    # (sub)domains in scope
-#hitlist = []         # optional individual urls to specially hit
-hitlist = ['http://example.com', 'https://play.google.com/store', 'https://play.google.com/store/apps']
+hitlist = []         # optional individual urls to specially hit
 requested_items = {} # keeps track of every unique request
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', \
@@ -144,8 +141,7 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
     Params:
         use_burp_suite_proxy (bool)
     """
-    global BROWSER_PAGE_PLUGINS
-    global hitlist #, logger
+    global hitlist, logger
     # We're going to request stuff with headless Chrome, proxied through Burp Suite
     browser = await get_browser(use_burp_suite_proxy)
     # Then for each item (URL) ...
@@ -155,9 +151,7 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
         page = await browser.newPage()
         try:
             await page.goto(item)
-            await page.screenshot({'path': 'example_' + item.replace('/', '').replace(':', '') + '.png'})
         except pyppeteer.errors.TimeoutError as e:
-            print(e)
             logger.warning('Timed out on request to ' + item)
             logger.warning('\t' + str(e))
         # Looping through plugins of this type
@@ -173,11 +167,56 @@ async def run_processing_on_hitlist(use_burp_suite_proxy):
 
 def main():
     global hitlist, inscope_urls, logger, requested_items
-    # TODO bunch of code left out here to parse stuff
+    # Instantiate the argument parser
+    parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
+    # Declaring all our acceptable arguments below...
+    parser.add_argument('target', type=str, help='Overall target URL')
+    parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
+    # Then grab them from the command line input
+    args = parser.parse_args()
+    # Note the extra line breaks in the next two lines of code are for purely visual appearances in the log...
+    for ascii_art_line in CONSPIRACY_ASCII_ART:
+        logger.info(ascii_art_line)
+    logger.info(DESCRIPTION_STR)
+    logger.info('')
+    logger.info('Starting to parse given targets...')
+    # Add the overall target to in-scope URLs
+    add_to_inscope_urls(args.target)
+    # Was hitlist flag specified?
+    if args.hitlist != None:
+        logger.info('Hitlist was specified @ ' + args.hitlist)
+        # Is the given path valid for a file?
+        hitlist_exists = False
+        try:
+            hitlist_exists = os.path.isfile(args.hitlist)
+        except:
+            pass
+        if hitlist_exists:
+            logger.info('Validated hitlist path, now starting to read contents...')
+            hitlist_lines = []
+            # Read it in as a text file
+            try:
+                f = open(args.hitlist, 'r')
+                # Break down by lines
+                hitlist_lines = f.readlines()
+                f.close()
+            except:
+                logger.error('Something went wrong while opening hitlist file: ' + args.hitlist)
+            # Validate then add each item to the hitlist
+            for line in hitlist_lines:
+                validated_line = get_validated_hitlist_line(line)
+                if validated_line == None:
+                    continue
+                hitlist.append(line)
+                # Also add root url to in-scope URLs if not already in there
+                this_root_url = derive_root_url(line)
+                add_to_inscope_urls(this_root_url)
+        else:
+            logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
     # If we have a hitlist then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
-        ###burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
+        #burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
         burp_proxy_is_up = False
         if burp_proxy_is_up:
             logger.info('Burp Suite proxy appears to be running, will use this for headless Chrome')
