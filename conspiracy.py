@@ -15,6 +15,7 @@ import logging
 import os
 import pkgutil
 import pyppeteer
+import re
 import socket
 import sys
 import time
@@ -86,26 +87,55 @@ def get_validated_hitlist_line(line):
     return validated_line
 
 def check_if_proxy_up(proxy_addr):
+    """
+    Check if proxy address provided seems possible to send traffic through
+
+    Params:
+        proxy_addr (str)
+
+    Returns:
+        (bool)
+    """
     global logger
-    try:
-        proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr, 'https' : proxy_addr })
-        opener = urllib.request.build_opener(proxy_handler)
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        urllib.request.install_opener(opener)
-        req = urllib.request.Request('https://github.com')
-        sock = urllib.request.urlopen(req)
-    except urllib.error.HTTPError as e:
-        if e.getcode() >= 400 and e.getcode() <= 500:
+    if '127.0.0.1' in proxy_addr or 'localhost:' in proxy_addr:
+        cleaned_proxy_addr = proxy_addr.replace('https://', 'http://').replace('http://', '')
+        # Assuming there's now just one : and it's before the port number, split the string
+        localhost_port = cleaned_proxy_addr.split(':')[-1]
+        try:
+            # Remove any characters which are not digits then parse that to int
+            localhost_port = int(re.sub('[^0-9]', '', localhost_port))
+        # If this went sideways then the proxy address is probably bust
+        except Exception as e:
+            return False
+        # Now let's see if we can bind to this port the proxy is on
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.bind(('127.0.0.1', localhost_port))
+            s.close()
+            return False
+        # When we *can't* that means port is in use and let's assume proxy is up
+        except Exception as e:
             return True
-        return False
-    except ConnectionRefusedError as e:
-        return False
-    except Exception as e:
-        # If whatever this exception is does not stem from connection, call it "unknown"
-        if 'No connection could be made' not in str(e):
-            logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
-            logger.warning('Assuming proxy is *not* available as a result')
-        return False
+    else:
+        try:
+            proxy_handler = urllib.request.ProxyHandler({ 'http' : proxy_addr, 'https' : proxy_addr })
+            opener = urllib.request.build_opener(proxy_handler)
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            urllib.request.install_opener(opener)
+            req = urllib.request.Request('https://github.com')
+            sock = urllib.request.urlopen(req)
+        except urllib.error.HTTPError as e:
+            if e.getcode() >= 400 and e.getcode() <= 500:
+                return True
+            return False
+        except ConnectionRefusedError as e:
+            return False
+        except Exception as e:
+            # If whatever this exception is does not stem from connection, call it "unknown"
+            if 'No connection could be made' not in str(e):
+                logger.warning('Encountered unknown exception while checking if proxy ' + proxy_addr + ' is up')
+                logger.warning('Assuming proxy is *not* available as a result')
+            return False
     return True
 
 def console_progress_bar(count, total):
