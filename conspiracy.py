@@ -66,14 +66,35 @@ logger = logging.getLogger('conspiracy')
 #######################################################################################################################
 
 def derive_root_url(text_line):
+    """
+    Derives root URL given string with one in it
+
+    Params:
+        text_line (str)
+    """
     o = urllib.parse.urlparse(text_line)
     return o.netloc
 
 def add_to_inscope_urls(target):
+    """
+    Add a new key to the global in-scope URL dict with value True
+
+    Params:
+        target (str)
+    """
     global inscope_urls
     inscope_urls[target] = True
 
 def get_validated_hitlist_line(line):
+    """
+    Cleans one line of hitlist data read in from whatever_file.txt
+
+    Params:
+        line (str)
+
+    Returns:
+        (str)
+    """
     # Weed out blank/extra lines
     if len(line.strip()) == 0:
         return None
@@ -122,6 +143,13 @@ def check_if_proxy_up(proxy_addr):
     return True
 
 def console_progress_bar(count, total):
+    """
+    Prints a 'progress bar' to console then flushes stdout
+
+    Params:
+        count (int)
+        total (int)
+    """
     bar_length = 60
     filled_length = int(round(bar_len * count / float(total)))
     percents = round(100.0 * count / float(total), 1)
@@ -130,6 +158,12 @@ def console_progress_bar(count, total):
     sys.stdout.flush()
 
 def multi_line_info_log(message):
+    """
+    Prints a multi-line log message with a single call for each line
+
+    Params:
+        message (str)
+    """
     global logger
     split_lines = message.split('\n')
     for line in split_lines:
