@@ -2,15 +2,20 @@
 
 from ._interfaces import ITargetingMode
 
+import logging
+
+
 class CrawlTargeting(ITargetingMode):
     """Conspiracy targeting mode that crawls from existing target(s)
 
     Params:
         name (str)
+        logger (Logger)
     """
 
     def __init__(self):
         self.name = 'Crawl'
+        self.logger = logging.getLogger('conspiracy')
 
     def check_arg_match(self, arg_string):
         """Returns whether the given argument value matches this mode.
@@ -21,7 +26,7 @@ class CrawlTargeting(ITargetingMode):
         Returns:
             (bool)
         """
-        if targeting_mode.lower() == 'crawl':
+        if arg_string.lower() == 'crawl':
             return True
         # Default to false
         return False

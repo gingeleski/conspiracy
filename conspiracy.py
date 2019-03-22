@@ -4,7 +4,7 @@ conspiracy.py
 Automated web app hacking
 
 python conspiracy.py www.google.com
-python conspiracy.py --hitlist ./test/assets/hitlist1.txt play.google.com
+python conspiracy.py --targeting-mode hitlist@/test/assets/hitlist1.txt play.google.com
 
 """
 
@@ -92,28 +92,6 @@ def add_to_inscope_urls(target):
     """
     global inscope_urls
     inscope_urls[target] = True
-
-def get_validated_hitlist_line(line):
-    """
-    Cleans one line of hitlist data read in from whatever_file.txt
-
-    Params:
-        line (str)
-
-    Returns:
-        (str)
-    """
-    # Weed out blank/extra lines
-    if len(line.strip()) == 0:
-        return None
-    # Allow lines prepended with # as comments
-    elif line.startswith('#'):
-        return None
-    validated_line = ''
-    if False == line.startswith('http://') or False == line.startswith('https://'):
-        validated_line += 'http://'
-    validated_line += line.replace('\n','') # Strip any line breaks remaining...
-    return validated_line
 
 def check_if_proxy_up(proxy_addr):
     """
@@ -257,7 +235,7 @@ def main():
             if True == targeting_mode.check_arg_match(args.targeting_mode):
                 has_run_one_targeting_mode = True
                 logger.info('Matched targeting mode "' + targeting_mode.get_name() + '"')
-                logger.info('Conducting ' + targeting_mode.get_name() + 'now...')
+                logger.info('Conducting ' + targeting_mode.get_name() + ' targeting now...')
                 # Run whatever the mode's logic is to get target URLs
                 targets_output = targeting_mode.acquire_targets()
                 previous_targets_number = len(hitlist)
