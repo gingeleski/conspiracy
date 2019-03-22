@@ -4,7 +4,7 @@ conspiracy.py
 Automated web app hacking
 
 python conspiracy.py www.google.com
-python conspiracy.py --hitlist ./test/assets/hitlist1.txt play.google.com
+python conspiracy.py --targeting-mode hitlist@/test/assets/hitlist1.txt play.google.com
 
 """
 
@@ -26,12 +26,14 @@ import urllib.request
 
 #######################################################################################################################
 
-# These snippets of code facilitate dynamic loading of all Conspiracy plugins that are present
+# These snippets of code facilitate dynamic loading of all Conspiracy modes and plugins that are present
 
 from plugins import *
+from targeting import *
 
 BROWSER_PAGE_PLUGINS = [cls() for cls in IBrowserPagePlugin.__subclasses__()]
 DOMAIN_PLUGINS = [cls() for cls in IDomainPlugin.__subclasses__()]
+TARGETING_MODES = [cls() for cls in ITargetingMode.__subclasses__()]
 
 #######################################################################################################################
 
@@ -53,6 +55,8 @@ CONSPIRACY_ASCII_ART = ['',
 
 PROXY_TEST_TIMEOUT = 5 # seconds
 PROXY_TEST_URL = 'https://www.google.com/'
+
+PUT_OVERALL_DOMAIN_TARGETS_IN_HITLIST = False
 
 #######################################################################################################################
 
@@ -88,28 +92,6 @@ def add_to_inscope_urls(target):
     """
     global inscope_urls
     inscope_urls[target] = True
-
-def get_validated_hitlist_line(line):
-    """
-    Cleans one line of hitlist data read in from whatever_file.txt
-
-    Params:
-        line (str)
-
-    Returns:
-        (str)
-    """
-    # Weed out blank/extra lines
-    if len(line.strip()) == 0:
-        return None
-    # Allow lines prepended with # as comments
-    elif line.startswith('#'):
-        return None
-    validated_line = ''
-    if False == line.startswith('http://') or False == line.startswith('https://'):
-        validated_line += 'http://'
-    validated_line += line.replace('\n','') # Strip any line breaks remaining...
-    return validated_line
 
 def check_if_proxy_up(proxy_addr):
     """
@@ -229,7 +211,7 @@ def main():
     parser = argparse.ArgumentParser(description=DESCRIPTION_STR)
     # Declaring all our acceptable arguments below...
     parser.add_argument('target', type=str, help='Overall target URL')
-    parser.add_argument('--hitlist', type=str, help='Optional path to text file of URLs to analyze')
+    parser.add_argument('--targeting-mode', type=str, help='Optional mode for acquiring target surface')
     # Then grab them from the command line input
     args = parser.parse_args()
     # Note the extra line breaks in the next two lines of code are for purely visual appearances in the log...
@@ -238,40 +220,37 @@ def main():
     logger.info(DESCRIPTION_STR)
     logger.info('')
     logger.info('Starting to parse given targets...')
+    if PUT_OVERALL_DOMAIN_TARGETS_IN_HITLIST:
+        overall_target_as_url = 'https://' + args.target
+        logger.info('Adding overall target <' + overall_target_as_url + '> to hitlist')
+        # Add overall target to hitlist in URL form with a probably-unneeded check for duplicates along the way
+        hitlist = hitlist + (list(set(overall_target_as_url) - set(hitlist)))
     # Add the overall target to in-scope URLs
     add_to_inscope_urls(args.target)
-    # Was hitlist flag specified?
-    if args.hitlist != None:
-        logger.info('Hitlist was specified @ ' + args.hitlist)
-        # Is the given path valid for a file?
-        hitlist_exists = False
-        try:
-            hitlist_exists = os.path.isfile(args.hitlist)
-        except:
-            pass
-        if hitlist_exists:
-            logger.info('Validated hitlist path, now starting to read contents...')
-            hitlist_lines = []
-            # Read it in as a text file
-            try:
-                f = open(args.hitlist, 'r')
-                # Break down by lines
-                hitlist_lines = f.readlines()
-                f.close()
-            except:
-                logger.error('Something went wrong while opening hitlist file: ' + args.hitlist)
-            # Validate then add each item to the hitlist
-            for line in hitlist_lines:
-                validated_line = get_validated_hitlist_line(line)
-                if validated_line == None:
-                    continue
-                hitlist.append(line)
-                # Also add root url to in-scope URLs if not already in there
-                this_root_url = derive_root_url(line)
-                add_to_inscope_urls(this_root_url)
+    # Was targeting mode specified?
+    if args.targeting_mode != None:
+        logger.info('Looking for match to given targeting mode string "' + args.targeting_mode + '"')
+        has_run_one_targeting_mode = False
+        for targeting_mode in TARGETING_MODES:
+            if True == targeting_mode.check_arg_match(args.targeting_mode):
+                has_run_one_targeting_mode = True
+                logger.info('Matched targeting mode "' + targeting_mode.get_name() + '"')
+                logger.info('Conducting ' + targeting_mode.get_name() + ' targeting now...')
+                # Run whatever the mode's logic is to get target URLs
+                targets_output = targeting_mode.acquire_targets()
+                previous_targets_number = len(hitlist)
+                # Add any new target URLs to the master list - we avoid duplicate entries
+                hitlist = hitlist + list(set(targets_output) - set(hitlist))
+                new_targets_number = len(hitlist) - previous_targets_number
+                logger.info('Added ' + str(new_targets_number) + ' targets after ' + targeting_mode.get_name())
+        if False == has_run_one_targeting_mode:
+            logger.warning('Did not run any targeting modes - none available matched "' + args.targeting_mode + '"')
         else:
-            logger.error('Hitlist path was specified but appears invalid: ' + args.hitlist)
-    # If we have a hitlist then...
+            # Let's now make align in-scope URLs with the hitlist... *THIS IS OPINIONATED*
+            for entry in hitlist:
+                this_root_url = derive_root_url(entry)
+                add_to_inscope_urls(this_root_url)
+    # If we have any targets then...
     if len(hitlist) > 0:
         logger.info('Checking if Burp Suite proxy ' + BURP_SUITE_PROXY + ' is running...')
         burp_proxy_is_up = check_if_proxy_up(BURP_SUITE_PROXY)
@@ -284,6 +263,8 @@ def main():
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(run_processing_on_hitlist(burp_proxy_is_up))
         logger.info('Done processing hitlist')
+    else:
+        logger.warning('No targets in hitlist, not requesting anything via headless Chrome')
     logger.info('Starting broader processing of in-scope URLs...')
     # For each of our in-scope URLs ...
     for inscope_url, _ in inscope_urls.items():

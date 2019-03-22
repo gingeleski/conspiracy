@@ -14,13 +14,8 @@ class ITargetingMode(abc.ABC):
         name (str)
     """
 
-    @abc.abstractmethod
-    def __init__(self, name):
-        """Abstract - constructor, should set targeting mode name.
-
-        Params:
-            name (str)
-        """
+    def __init__(self):
+        """Abstract - constructor, should set targeting mode name."""
         pass
 
     def get_name(self):
@@ -45,5 +40,9 @@ class ITargetingMode(abc.ABC):
 
     @abc.abstractmethod
     def acquire_targets(self):
-        """Run execution logic for this targeting mode."""
+        """Run execution logic for this targeting mode, returns new targets' URLs
+        
+        Returns:
+            (list)
+        """
         pass
