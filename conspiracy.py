@@ -236,8 +236,8 @@ def main():
                 has_run_one_targeting_mode = True
                 logger.info('Matched targeting mode "' + targeting_mode.get_name() + '"')
                 logger.info('Conducting ' + targeting_mode.get_name() + ' targeting now...')
-                # Run whatever the mode's logic is to get target URLs
-                targets_output = targeting_mode.acquire_targets()
+                # Run whatever the mode's logic is to get target URLs from initial scope
+                targets_output = targeting_mode.acquire_targets(inscope_urls)
                 previous_targets_number = len(hitlist)
                 # Add any new target URLs to the master list - we avoid duplicate entries
                 hitlist = hitlist + list(set(targets_output) - set(hitlist))
