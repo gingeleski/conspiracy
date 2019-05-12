@@ -40,5 +40,19 @@ class CrawlTargeting(ITargetingMode):
         Returns:
             (list)
         """
-        # TODO implement this here
-        return []
+        targets = []
+        for key, value in inscope_urls.items():
+            # TODO actually implement this all here
+            print(key)
+            """
+            browser = await pyppeteer.launch(headless=True)
+            page = await browser.newPage()
+            try:
+                await page.goto(key)
+            except pyppeteer.errors.TimeoutError as e:
+                # Currently doing nothing on timeout
+                pass
+            await page.close()
+            await browser.close()
+            """
+        return targets
