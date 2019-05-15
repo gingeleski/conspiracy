@@ -161,4 +161,4 @@ class CrawlTargeting(ITargetingMode):
             # We are considering every unique URL seen as a target
             just_acquired_targets = cr.get_seen_urls()
             targets = targets.union(just_acquired_targets)
-        return targets
+        return list(targets)
